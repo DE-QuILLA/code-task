@@ -56,6 +56,3 @@ pip install -r requirements-dev.txt
 ```bash
 pre-commit install
 ```
-
-0
-
