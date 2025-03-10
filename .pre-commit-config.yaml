@@ -1,0 +1,37 @@
+fail_fast: true  # 에러 발생 시 즉시 멈추기 (빠른 피드백)
+
+repos:
+  # 기본적인 코드 클린업을 위한 훅 - 파일 끝 정리
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+
+  # Ruff 기반 린트 + 포맷터
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10  # 로컬 버전을 일치시키면 좋음
+    hooks:
+      - id: ruff  
+        args:
+          - --select=I  
+          - --fix       
+      - id: ruff-format
+
+  # 민감한 정보(Secret) 감지: 실수로 키, 패스워드 푸시 방지
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect secrets
+        language: python
+        entry: detect-secrets-hook
+        args: ['--baseline', '.secrets.baseline']
+
+  # 로컬 훅: 커밋 메시지에 Jira 티켓 넘버 자동 추가 스크립트
+  - repo: local
+    hooks:
+      - id: add-ticket-number
+        name: Add Jira ticket number to commit message
+        entry: ./ci_scripts/add_ticket_number.sh
+        language: system
+        stages: [commit-msg]
