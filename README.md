@@ -8,22 +8,22 @@
 
 ---
 
-- code-feat     : 새로운 기능 추가 
-- code-fix      : 디버깅, 버그 수정, 리팩토링 등 코드 수정
-- code-chore    : 잡일성 작업 
-- code-docs     : 문서 관련 작업 
-- code-test     : 테스트 코드 추가 및 수정
+- feat     : 새로운 기능 추가 
+- fix      : 디버깅, 버그 수정, 리팩토링 등 코드 수정
+- chore    : 잡일성 작업 
+- docs     : 문서 관련 작업 
+- test     : 테스트 코드 추가 및 수정
 
 ---
 
 
-2. 깃허브에 아래와 같은 브랜치가 자동 생성됩니다.
+2. 깃허브에 아래와 같은 브랜치를 이슈를 생성할 때 생성합니다.
 
 ---
 
-- 만약 Jira에 생성한 티켓이 다음과 같다면 : `code-feat-add-login`
+- 만약 Jira에 생성한 티켓이 다음과 같다면 : `feat-add-login`
 
-- 다음과 같은 브랜치가 생성됩니다 : `code-feat/JIRA-1234-add-login`
+- 다음과 같은 브랜치가 생성됩니다 : `feat/JIRA-1234-add-login`
     - 1234는 티켓 번호
 
 ---
@@ -56,24 +56,4 @@ pip install -r requirements-dev.txt
 ```bash
 pre-commit install
 ```
-
-- 
-
-
-
-
-- 정리
-
-일단 지라를 생성
-
-그러면 깃허브에 관련 브랜치가 따임
-
-그 브랜치에서 코드 작업
-
-PR을 데브 브랜치로 => 이후 release로
-
-그 외 precommit으로 코드 린팅 + 깃헙 액션으로 한번 더 정리
-
-
-
 
