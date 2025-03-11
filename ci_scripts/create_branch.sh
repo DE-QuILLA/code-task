@@ -7,7 +7,8 @@ read -p "티켓 번호를 입력하세요 (예: 123): " NUMBER
 read -p "브랜치 설명을 입력하세요 (예: add-login-api): " DESC
 
 # 브랜치 네임 생성
-BRANCH_NAME="${TYPE}/${NUMBER}-${DESC}"
+PROJECT_ID=DEQ
+BRANCH_NAME="${TYPE}/${PROJECT_ID}-${NUMBER}-${DESC}"
 
 # 원본 브랜치로 전환
 git swtich "$ORIGIN_BRANCH"
