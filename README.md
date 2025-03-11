@@ -23,7 +23,7 @@
 
 - 만약 Jira에 생성한 티켓이 다음과 같다면 : `feat-add-login`
 
-- 다음과 같은 브랜치가 생성됩니다 : `feat/JIRA-1234-add-login`
+- 다음과 같은 브랜치를 생성합시다 : `feat/JIRA-1234-add-login`
     - 1234는 티켓 번호
 
 ---
@@ -57,7 +57,4 @@ pip install -r requirements-dev.txt
 pre-commit install
 ```
 
-0
-1
-1
-2
+sdlkjf

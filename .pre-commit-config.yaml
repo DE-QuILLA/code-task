@@ -1,6 +1,16 @@
 fail_fast: true  # 에러 발생 시 즉시 멈추기 (빠른 피드백)
 
 repos:
+  # 윈도우라면 아래 주석을 제거해주세요
+  # - repo: local
+  #   hooks:
+  #     - id: convert-secrets-to-utf8-nobom
+  #       name: Convert .secrets.baseline to UTF-8 without BOM
+  #       entry: powershell.exe -File ./ci_scripts/convert_to_utf8_nobom.ps1
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
+
   # 기본적인 코드 클린업을 위한 훅 - 파일 끝 정리
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
