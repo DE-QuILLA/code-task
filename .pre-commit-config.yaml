@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: convert-secrets-to-utf8-nobom
         name: Convert .secrets.baseline to UTF-8 without BOM
-        entry: powershell.exe -File .\ci_scripts\convert_to_utf8_nobom.ps1
+        entry: powershell.exe -File ./ci_scripts/convert_to_utf8_nobom.ps1
         language: system
         pass_filenames: false
         always_run: true
