@@ -1,7 +1,5 @@
 # DE-QUILLA 팀 프로젝트 코드 레포
 
----
-
 ### 0. Workflow
 
 1. 깃허브에 반영되어야 할 작업이라면, 먼저 Jira에서 티켓을 생성하며 아래와 같은 prefix를 사용합니다.
@@ -57,4 +55,10 @@ pip install -r requirements-dev.txt
 pre-commit install
 ```
 
-sdlkjf
+- 이후 편하게 코드작업을 시작해주세요.
+    - 윈도우 사용자라면 pre-commit-config.yaml의 내용을 참고해주세요.
+
+
+##### 1 - 2. 리드미리드미
+
+- 리드미르디므리니ㅓ리낟리나드릳ㄹ리드미르디르미릐드리므리드리므디름디릠
