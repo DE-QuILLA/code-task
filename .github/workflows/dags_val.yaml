@@ -1,0 +1,29 @@
+# name: Airflow DAG Lint & Validation
+
+# on:
+#   pull_request:
+#     branches:
+#       - main
+#       - dev
+#     paths:
+#       - "dags/**"
+
+# jobs:
+#   lint-and-validate-dags:
+#     name: Lint and Validate DAGs
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.10"
+
+#       - name: Install Airflow
+#         run: pip install apache-airflow
+
+#       - name: Validate DAGs
+#         run: python -m airflow dags list

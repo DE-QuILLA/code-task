@@ -1,0 +1,38 @@
+# name: Build and Push Spark Image
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+#     paths:
+#       - "spark/**"
+
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKER_USERNAME }}
+#           password: ${{ secrets.DOCKER_PASSWORD }}
+
+#       - name: Build and push Spark Docker image
+#         run: |
+#           if [ -f "spark/Dockerfile.spark" ]; then
+#             IMAGE_NAME="your-dockerhub-username/spark"
+#             docker build -t $IMAGE_NAME:latest -f spark/Dockerfile.spark spark
+#             docker push $IMAGE_NAME:latest
+#           else
+#             echo "Dockerfile.spark not found! Skipping build."
+#           fi
