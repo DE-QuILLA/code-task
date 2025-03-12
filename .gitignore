@@ -1,2 +1,5 @@
 # venv 제외
 venv/
+
+# 문서화 코드
+for_docs/
