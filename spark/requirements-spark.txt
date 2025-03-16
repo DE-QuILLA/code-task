@@ -1,2 +1,0 @@
-# kafka consumer
-kafka-python==2.0.6

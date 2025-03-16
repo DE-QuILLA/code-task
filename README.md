@@ -21,7 +21,7 @@
 
 - 만약 Jira에 생성한 티켓이 다음과 같다면 : `feat-add-login`
 
-- 다음과 같은 브랜치를 생성합시다 : `feat/JIRA-1234-add-login`
+- 다음과 같은 브랜치를 생성합니다 : `feat/JIRA-1234-add-login`
     - 1234는 티켓 번호
 
 ---
@@ -43,12 +43,6 @@ git fetch && git checkout code-feat/JIRA-1234-add-login
 pip install -r requirements-dev.txt
 ```
 
-- pre-commit 등 작업에 필요한 종속성 설치하기 (venv 사용 권장)
-
-```bash
-pip install -r requirements-dev.txt
-```
-
 - pre-commit 훅 초기화 및 git 연동
 
 ```bash
@@ -56,9 +50,5 @@ pre-commit install
 ```
 
 - 이후 편하게 코드작업을 시작해주세요.
-    - 윈도우 사용자라면 pre-commit-config.yaml의 내용을 참고해주세요.
-
-
-##### 1 - 2. 리드미리드미
-
-- 리드미르디므리니ㅓ리낟리나드릳ㄹ리드미르디르미릐드리므리드리므디름디릠
+    - 윈도우 사용자라면 pre-commit-config.yaml의 주석 처리된 내용을 참고해주세요.
+    - main, master, dev 등의 브랜치에서는 CI 관련 스크립트가 작동하지 않습니다.
