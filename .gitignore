@@ -3,3 +3,6 @@ venv/
 
 # 문서화 코드
 for_docs/
+
+# 캐시
+*cache/
