@@ -6,3 +6,6 @@ for_docs/
 
 # 캐시
 *cache/
+
+# 로컬 개발용 임시 파일
+*chromedriver-linux64/
