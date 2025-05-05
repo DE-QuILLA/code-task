@@ -7,4 +7,4 @@ apt-get update
 apt-get install -y google-chrome-stable
 wget https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/linux64/chromedriver-linux64.zip
 unzip chromedriver-linux64.zip
-rm chromedriver-linux64.zip
+rm chromedriver-linux64.zip 
