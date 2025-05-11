@@ -1,0 +1,2 @@
+class KrakenScriptSuccess:
+    pass

@@ -1,0 +1,47 @@
+FROM sdaberdaku/spark-with-glue-builder:v3.5.1 AS builder
+
+FROM python:3.10.14-slim-bookworm
+
+ARG spark_uid=185
+
+RUN groupadd --system --gid=${spark_uid} spark; \
+    useradd  --system --uid=${spark_uid} --gid=spark --create-home spark
+
+# 필수 패키지 설치 + GCS connector 다운로드 추가
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-17-jre tini procps wget && \
+    wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop3-2.2.10/gcs-connector-hadoop3-2.2.10.jar \
+         -O /tmp/gcs-connector.jar && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV SPARK_HOME=/opt/spark
+ENV HADOOP_HOME=/opt/hadoop
+ENV HADOOP_COMMON_LIB_NATIVE_DIR="${HADOOP_HOME}/lib/native"
+ENV HADOOP_OPTS="${HADOOP_OPTS} -Djava.library.path=${HADOOP_HOME}/lib/native"
+ENV PATH="${PATH}:/home/spark/.local/bin:${JAVA_HOME}/bin:${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${HADOOP_HOME}/bin"
+
+COPY --from=builder /opt/spark/dist/ ${SPARK_HOME}/
+COPY --from=builder /opt/hadoop/ ${HADOOP_HOME}/
+
+# GCS jar 복사
+RUN mkdir -p ${SPARK_HOME}/jars
+
+# JAR 디렉토리 복사 (사전에 같은 디렉토리에 jars/ 폴더 존재해야 함)
+COPY jars/ ${SPARK_HOME}/jars/
+
+RUN chown -R spark:spark ${SPARK_HOME}/; \
+    chown -R spark:spark ${HADOOP_HOME}/
+
+RUN cp ${SPARK_HOME}/kubernetes/dockerfiles/spark/entrypoint.sh /opt/entrypoint.sh; \
+    chmod a+x /opt/entrypoint.sh; \
+    cp ${SPARK_HOME}/kubernetes/dockerfiles/spark/decom.sh /opt/decom.sh; \
+    chmod a+x /opt/decom.sh
+
+USER spark
+WORKDIR /home/spark
+
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir --trusted-host pypi.python.org --editable ${SPARK_HOME}/python -r requirements.txt
+
+ENTRYPOINT ["/opt/entrypoint.sh"]

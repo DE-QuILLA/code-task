@@ -1,0 +1,18 @@
+FROM apache/spark:3.5.1
+
+USER root
+
+# 새로운 디렉토리 생성 및 권한 부여
+RUN mkdir -p /opt/spark/jars
+
+# JAR 파일을 /tmp로 복사
+RUN mkdir -p /opt/spark/jars/
+COPY jars/*.jar /opt/spark/jars/
+RUN chmod -R 755 /opt/spark/jars/*
+
+# PySpark 애플리케이션 복사
+COPY ./spark_job/ /opt/spark/jobs/
+
+# pip 종속성
+COPY ./spark-requirements.txt /opt/spark-requirements.txt
+RUN pip install --no-cache-dir -r /opt/spark-requirements.txt

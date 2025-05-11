@@ -1,0 +1,6 @@
+# 예시 requirements.txt
+pyspark==3.5.1
+numpy==1.26
+pandas==2.0
+kafka-python==2.9
+redis==5.0.1

@@ -6,3 +6,9 @@ for_docs/
 
 # 캐시
 *cache/
+
+# 시크릿 키들
+secret_keys/
+
+# test
+test/
