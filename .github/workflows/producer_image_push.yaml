@@ -28,7 +28,7 @@ jobs:
     - name: Build and Push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./producer
-        file: ./producer/Dockerfile.producer
+        context: ./kafka_producer
+        file: ./kafka_producer/Dockerfile.producer
         push: true
         tags: coffeeisnan/deq-producer:latest

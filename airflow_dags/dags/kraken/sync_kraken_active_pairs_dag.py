@@ -1,8 +1,10 @@
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
+from airflow.sensors.time_delta import TimeDeltaSensor
 from airflow.models import Variable
 from datetime import datetime, timezone, timedelta
 from kraken_modules.operators.deq_pod_operator import DeqPodOperator
+from kraken_modules.operators.fast_api_command_operator import FastApiCommandOperator
 from kraken_modules.notifications.discord import discord_success_callback, discord_failure_callback, discord_sla_miss_callback
 
 default_args = {
@@ -14,15 +16,16 @@ default_args = {
 with DAG(
     dag_id="sync_kraken_active_pairs_to_redis",
     default_args=default_args,
-    schedule_interval="",
+    schedule_interval="@quarter_hour",  # NOTE: 수정 가능성 존재, 매 15분
     on_success_callback=discord_success_callback,
     on_failure_callback=discord_failure_callback,
     sla_miss_callback=discord_sla_miss_callback,
     catchup=False,
-    tags=["example"],
+    tags=["KRAKEN", "ACTIVE PAIR", "REDIS"],
 ) as dag:
     """
-    Kraken REST api에서 활성 거래쌍 목록을 가져와서 redis에 저장하는 대그
+    Kraken REST api에서 활성 거래쌍 목록을 가져와서 redis에 저장하고, 변경 사항이 발생 시 fast api를 통해 producer에게 알리는 DAG
+    - 15분마다 실행, 매번 5분 대기 후 Producer health check 수행
     """
 
     start_task = EmptyOperator(
@@ -30,7 +33,7 @@ with DAG(
     )
 
     sync_active_pairs_data_in_pod_task = DeqPodOperator(
-        task_id="sync_kraken_active_pairs_to_redis",
+        task_id="sync_kraken_active_pairs_to_redis_task",
         script_path="kraken/sync_kraken_active_pairs_script.py",
         custom_args={
             "api_url": Variable.get("kraken_api_url"),
@@ -48,8 +51,19 @@ with DAG(
         sla=timedelta(minutes=15),
     )
 
+    wait_5_min_task = TimeDeltaSensor(
+        task_id="wait_5_min_task",
+        delta=timedelta(minutes=5)
+    )
+
+    fast_api_health_check_task = FastApiCommandOperator(
+        endpoint="/health",
+        method="GET",
+        payload=None,
+    )
+
     end_task = EmptyOperator(
         tsak_id="end_sync_kraken_active_pairs_task",
     )
 
-    start_task >> sync_active_pairs_data_in_pod_task >> end_task
+    start_task >> sync_active_pairs_data_in_pod_task >> wait_5_min_task >> fast_api_health_check_task >> end_task

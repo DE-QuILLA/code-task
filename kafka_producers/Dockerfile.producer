@@ -5,11 +5,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 없을 경우 스크립트 폴더를 생성
-RUN mkdir -p /app/airflow_pod_scripts/
+RUN mkdir -p /app/kafka_producers/
 
 # 현재 디렉토리의 scripts 폴더를 컨테이너의 /app/airflow_pod_scripts로 복사
-COPY ./scripts /app/airflow_pod_scripts/
+COPY ./scripts /app/kafka_producers/
 
 # 사용 모듈 설치
-COPY ./pod_requirements.txt /opt/pod_requirements.txt
-RUN pip install -r /opt/pod_requirements.txt
+COPY ./producer_requirements.txt /opt/producer_requirements.txt
+RUN pip install -r /opt/producer_requirements.txt

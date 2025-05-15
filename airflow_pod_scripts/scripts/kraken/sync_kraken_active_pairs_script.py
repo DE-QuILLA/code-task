@@ -1,20 +1,23 @@
-from kraken_modules.kraken_rest_api_collector import KrakenActivePairsRestApiCollector
+from airflow_pod_scripts.scripts.kraken.kraken_modules.collectors.kraken_rest_api_collector import KrakenActivePairsRestApiCollector
 from kraken_modules.utils.enums.kraken_enums import KrakenExitCodeEnum
-from kraken_modules.utils.logging.kraken_stdout_logger import get_stdout_logger, get_error_msg
+from kraken_modules.utils.logging.kraken_stdout_logger import KrakenStdandardLogger
 from kraken_modules.utils.map_exceptions_to_exit_code import get_exitcode_from_exception
 from kraken_modules.utils.exceptions.kraken_success import KrakenScriptSuccess
+from argparse import Namespace
 import asyncio
 import argparse
 import json
 import sys
-
+import logging
 
 if __name__ == "__main__":
-    
-    logger = get_stdout_logger(name="Kraken Active Pairs main logger")
+    """
+    kraken REST API => 활성 거래쌍 정보를 가져와서 동기화하는 코드의 엔트리 포인트
+    """
+    logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name="MAIN")
 
     try: 
-        logger.info("argument 파싱 시작!")
+        logger.info_start("argument 파싱",)
         parser = argparse.ArgumentParser(description="크라켄 거래쌍 결정 옵션 argument용 parser")
 
         parser.add_argument("--api_url", type=str, required=True, help="Kraken 거래쌍 API URL")
@@ -27,26 +30,24 @@ if __name__ == "__main__":
         parser.add_argument("--retry_delay", type=int, required=False, default=5, help="retry 딜레이 (초)")
         parser.add_argument("--timeout", type=int, required=False, default=120, help="커넥션 타임아웃 (초)")
 
-        args = parser.parse_args()
-        logger.info("argument 파싱 완료!")
+        args: Namespace = parser.parse_args()
+        logger.info_success(description="argument 파싱",)
     except Exception as e:
-        logger.exception(f"argument 파싱 중 에러로 종료!: {e}")
+        logger.exception_common(error=e, description="argument 파싱",)
         sys.exit(KrakenExitCodeEnum.INVALID_ARGS_ERR.value)
 
-    logger.info("argument 전처리 - params, headers 딕셔너리화 시작!")
+    
     try:
+        logger.info_start("argument 전처리 - params, headers")
         args.params = json.loads(args.params)
         args.headers = json.loads(args.headers)
-    except TypeError as e:
-        logger.exception(f"params 혹은 headers JSON loads 실패!: {e}")
-        sys.exit(KrakenExitCodeEnum.JSON_LOAD_ERR.value)
+        logger.info_success("argument 전처리 - params, headers")
     except Exception as e:
-        logger.exception(f"params, headers 처리 중 알수없는 에러로 종료!: {e}")
-        sys.exit(KrakenExitCodeEnum.UNKNOWN_ERR.value)
-    logger.info("argument 전처리 - params, headers 딕셔너리화 완료!")
+        logger.exception_common(error=e, description=f"params or headers JSON loads")
+        sys.exit(KrakenExitCodeEnum.JSON_LOAD_ERR.value)
 
-    logger.info("Kraken active 거래쌍 수집 시작!")
     try:
+        logger.info_start("Kraken active 거래쌍 수집")
         collector = KrakenActivePairsRestApiCollector(
             api_url=args.api_url,
             redis_url=args.redis_url,
@@ -59,9 +60,9 @@ if __name__ == "__main__":
             timeout=args.timeout,
             )
         asyncio.run(collector.run())
+        logger.info_success("Kraken active 거래쌍 수집")
     except Exception as e:
-        logger.exception(get_error_msg(e))
+        logger.exception_common(error=e, description="Kraken active 거래쌍 수집")
         sys.exit(get_exitcode_from_exception(e))
-    logger.info("Kraken active 거래쌍 수집 완료!")
 
     sys.exit(get_exitcode_from_exception(KrakenScriptSuccess))

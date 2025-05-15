@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from typing import Any
 
-
+# NOTE: 폐기 예정 - Decimal이 아니라 string으로 넘어온다.
 class KrakenDecimalJsonEncoder(json.JSONEncoder):
     """
     Decimal 객체를 문자열(str)로 변환해 JSON 직렬화 가능하게 만들기
