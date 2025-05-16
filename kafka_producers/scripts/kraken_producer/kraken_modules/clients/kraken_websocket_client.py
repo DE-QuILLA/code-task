@@ -1,42 +1,84 @@
+import asyncio
 import websockets
-import json
-from datetime import datetime
-from typing import Dict
-from decimal import Decimal
+from websockets.exceptions import ConnectionClosedError, WebSocketException
+from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
+from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
+from kraken_modules.config_models.kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel
+from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
+from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
+from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenBaseHealthTrackedComponent
+from kraken_modules.utils.wrapper.retry_wrapper_function import custom_retry
+from typing import List, Optional
 
-# Decimal이 기본적으로 json - serializable 하지 않기 때문에 이친구가 필요함
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            return str(obj)
-        return super().default(obj)
 
-class KrakenWebSocketClient:
-    def __init__(self, url: str, subscribe_dict: Dict):
-        self.url = url
-        self.subscribe_dict = subscribe_dict  # Dict
-        self.subscribe_message = self._build_subscribe_message(subscribe_dict)  # str
+class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponentWithConfig):
+    def __init__(self, config: KrakenBaseWebSocketClientConfigModel, status_manager: KrakenProducerStatusManager, kafka_client: KrakenKafkaClient):
+        self.config: KrakenBaseWebSocketClientConfigModel = config
 
-    @staticmethod
-    def _build_subscribe_message(subscribe_dict):
-        return json.dumps(subscribe_dict)
+        # 공통(고정) 속성 초기화
+        self.topic_name: str = config.topic_name
+        self.retry_num: Optional[int] = config.retry_num or 5
+        self.retry_delay: Optional[int] = config.retry_delay or 1
+        self.conn_timeout: Optional[int] = config.conn_timeout or 20
+        self.init_subscription_msg: str = config.subscription_msg
 
-    def _pretty_print_ticker(self, data):
-        print(f"Time: [{datetime.now().isoformat()}]")
-        print(f"Received Data: ")
-        print(f"{json.dumps(data, indent=2, ensure_ascii=False, cls=DecimalEncoder)}")
-        print("-" * 60)
+        # 외부 객체
+        self.kafka_client: KrakenKafkaClient =  kafka_client
+        self.status_manager: KrakenProducerStatusManager = status_manager
+
+        # 동적 초기화
+        self.component_name = f"WEB SOCKET CLIENT - {self.config.channel}"
+        self.ws: websockets.connect = None
+        self.logger = KrakenStdandardLogger(f"{self.component_name}")
+
+    async def initialize_websocket_client(self):
+        await self.connect()
+        await self.subscribe(subscription_message=self.init_subscription_msg)
+
+    async def subscribe(self, subscription_message: str):
+        await self.send(subscription_message)
+
+    async def unsubscribe(self, unsubscription_message: str):
+        await self.send(unsubscription_message)
+
+    async def connect(self):
+        self.logger.info_start("웹소켓 연결 시작")
+        self.ws = await self._connect_with_retry()
+        self.logger.info_success("웹소켓 연결 성공")
+
+    async def _connect_with_retry(self):
+        return await custom_retry(logger=self.logger, retry_num=self.retry_num,
+                           retry_delay=self.retry_delay, conn_timeout=self.conn_timeout, description=f"{self.config.channel} 웹소켓 연결",
+                           func=websockets.connect, func_kwargs={"uri": self.endpoint_url},)
+
+    async def send(self, message: str):
+        await self._send_with_retry(message=message)
+
+    async def _send_with_retry(self, message: str):
+        await custom_retry(
+            logger=self.logger,
+            retry_num=self.retry_num,
+            retry_delay=self.retry_delay,
+            conn_timeout=self.conn_timeout,
+            description=f"[{self.config.channel}] 채널에 [{message}] 메시지 전송",
+            func=self.ws.send(message),
+            
+        )
 
     async def listen(self):
-        async with websockets.connect(self.url) as ws:
+        try:
+            self.logger.info_start("메시지 수신 루프 시작")
+            async for message in self.ws:
+                # 여기서는 str로 옴 → Kafka에 그대로 넘김
+                await self.kafka_client.produce(message=message, topic_name=self.topic_name)
+        except Exception as e:
+            raise e
+
+    async def run(self,):
+        while True:
             try:
-                await ws.send(self.subscribe_message)
-                print(f"Connected: Subscribed to {self.subscribe_dict.get('channel', 'Unknown channel')} for {', '.join(self.subscribe_dict.get('symbol', []))}")
+                await self.initialize_websocket_client()
+                await self.listen()
             except Exception as e:
-                print(f"Failed to connect: Connection failed")
-                print(f"Error message: {e}")
-
-            async for message in ws:
-                msg = json.loads(message, parse_float=Decimal)
-                self._pretty_print_ticker(msg)
-
+                self.logger.exception_common(error=e, description=f"웹소켓 수신 중 오류, {self.retry_delay} 초 이후 재시도")
+                await asyncio.sleep(self.retry_delay)

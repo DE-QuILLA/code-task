@@ -24,7 +24,7 @@ class KrakenRestClient:
         path: str,
         params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """GET 요청 후 JSON 응답 반환"""
+        """GET 요청 후 JSON 응답 그대로 반환(Retry 내장)"""
         async with aiohttp.ClientSession() as session:
             return await custom_retry(
                 logger=self.logger,
@@ -41,6 +41,7 @@ class KrakenRestClient:
             )
 
     async def _get_json(self, session: aiohttp.ClientSession, path: str, params: Dict[str, Any] = None):
+        """GET 요청 후 JSON 응답 반환하는 내부 로직"""
         url = f"{self.base_url}{path}"
         async with session.get(url, headers=self.headers, params=params) as response:
             response.raise_for_status()

@@ -8,7 +8,6 @@ import asyncio
 import argparse
 import json
 import sys
-import logging
 
 if __name__ == "__main__":
     """

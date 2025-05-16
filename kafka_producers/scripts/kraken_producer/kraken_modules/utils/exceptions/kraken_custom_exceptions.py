@@ -24,3 +24,7 @@ class KrakenProdcuerActivePairTypeException(KrakenProducerBaseException):
 class KrakenProducerNotValidStatusCodeException(KrakenProducerBaseException):
     """존재하지 않는 상태 코드 인풋 에러"""
     pass
+
+class KrakenProducerNotValidMessageTypeException(KrakenProducerBaseException):
+    """Dict 혹은 str이 아닌 메시지 발생"""
+    pass

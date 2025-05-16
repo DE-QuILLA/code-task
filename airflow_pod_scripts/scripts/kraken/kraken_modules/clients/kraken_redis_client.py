@@ -3,7 +3,6 @@ from typing import Dict, List, Any
 from kraken_modules.utils.logging.kraken_stdout_logger import KrakenStdandardLogger
 from kraken_modules.utils.data_models.kraken_active_pair_data_models import KrakenActivePairDataModel
 from kraken_modules.utils.wrappers.custrom_retry_wrapper import custom_retry
-import logging
 
 
 class KrakenRedisClient:
@@ -54,32 +53,35 @@ class KrakenRedisClient:
         )
 
     def get_status(self):
+        """스테이터스 반환"""
         return self.is_healthy
 
     async def close(self):
+        """커넥션 종료"""
         await custom_retry(
             logger=self.logger,
             retry_num=self.retry_num,
             retry_delay=self.retry_delay,
             conn_timeout=self.conn_timeout,
             description="Redis 연결 종료",
-            func=self.redis.close(),
+            func=self.redis.close,
             func_kwargs=None,
         )
 
     async def fetch_all_data(self, redis_key: str):
-        await custom_retry(
+        """특정 key의 모든 데이터를 가져오는 기능"""
+        return await custom_retry(
             logger=self.logger,
             retry_num=self.retry_num,
             retry_delay=self.retry_delay,
             conn_timeout=self.conn_timeout,
             description=f"[{redis_key}] KEY 데이터 GET ALL 요청",
             func=self.redis.hgetall,
-            func_kwargs={"redis_key": redis_key}
+            func_kwargs={"name": redis_key}
         )
 
     async def update_if_changed(self, redis_key: str, new_data: Dict[str, Any]) -> List[str]:
-        """기존 Redis 데이터와 비교 후 변경된 항목만 저장"""
+        """기존 Redis 데이터와 비교 후 변경된 항목만 저장, Pipeline 사용 배치"""
         old_data = await self.fetch_all_data(redis_key=redis_key)
         changed_keys = []
         pipe = self.redis.pipeline()
