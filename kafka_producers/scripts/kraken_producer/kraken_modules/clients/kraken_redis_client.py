@@ -7,20 +7,24 @@ from kraken_modules.interfaces.kraken_base_health_tracked_component import Krake
 from kraken_modules.utils.wrapper.retry_wrapper_function import custom_retry
 from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus, KrakenProducerStatusManager
+from kraken_modules.config_models.kraken_redis_client_configs import KrakenRedisClientConfigModel
 
 
 class KrakenRedisClient(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedComponent):
     """
     Redis 인스턴스와의 연결을 나타내는 객체
     """
-    def __init__(self, status_manager: KrakenProducerStatusManager, redis_url: str, retry_num: int = 5, retry_delay: int = 2, conn_timeout: int = 10):
-        self.status_manager: KrakenProducerStatusManager = status_manager
-        self.redis_url: str = redis_url
-        self.retry_num: int = retry_num
-        self.retry_delay: int = retry_delay
-        self.conn_timeout: int = conn_timeout
-        self.component_name: str = "REDIS CLIENT"
+    def __init__(self, config: KrakenRedisClientConfigModel, status_manager: KrakenProducerStatusManager,):
+        # config 객체에서 가져오는 값
+        self.redis_url: str = config.redis_url
+        self.retry_num: int = config.retry_num
+        self.retry_delay: int = config.retry_delay
+        self.conn_timeout: int = config.conn_timeout
+        self.component_name: str = config.component_name
+
+        # 동적 초기화, 외부 주입 객체
         self.redis: Redis = None
+        self.status_manager: KrakenProducerStatusManager = status_manager
         self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name=self.component_name,)
 
     async def initialize_redis_client(self) -> None:
@@ -105,7 +109,7 @@ class KrakenRedisClient(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedCo
                                                     last_checked_at=datetime.now(ZoneInfo("Asia/Seoul")),
                                                     message=f"{self.component_name} FAILED HEALTH CHECK",
                                                     )
-                self.logger.warning_common(description="헬스 체크 중 예외 없는 Redis Pong 실패")
+                self.logger.warning_common(description="헬스 체크 중 예외 없는 Redis Ping 실패")
         except Exception as e:
             self.logger.exception_common(error=e, description="헬스 체크 중 Redis 연결")
             raise e

@@ -1,3 +1,4 @@
+import json
 from typing import Set, Tuple, List, Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -9,19 +10,23 @@ from kraken_modules.interfaces.kraken_base_health_tracked_component import Krake
 from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
 from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus
+from kraken_modules.config_models.kraken_active_pair_manager_config_model import KrakenActivePairManagerConfigModel
 
 
 class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseComponentWithConfig):
     """
     Redis에서 구독 대상 거래쌍 정보를 불러오고, 현재 상태와 비교하여 변화 추적하는 클래스
     """
-    def __init__(self, redis_client: KrakenRedisClient, redis_key: Optional[str] = "kraken:active_pairs", retry_num: Optional[int] = 5, retry_delay: Optional[int] = 2,):
-        self.redis_client = redis_client
-        self.redis_key = redis_key
-        self.retry_num = retry_num
-        self.retry_delay = retry_delay
+    def __init__(self, redis_client: KrakenRedisClient, config: KrakenActivePairManagerConfigModel):
+        # config 기반 초기화
+        self.redis_key: str = config.redis_key
+        self.retry_num: int = config.retry_num
+        self.retry_delay: int = config.retry_delay
+        self.conn_timeout: int = config.conn_timeout
+        self.component_name: str = config.component_name
 
-        self.component_name: str = "ACTIVE PAIR MANAGER"
+        # 동적 초기화
+        self.redis_client: KrakenRedisClient = redis_client
         self.current_active_pairs: List[KrakenActivePairDataModel] = list()
         self.current_active_subscription_key: Set[KrakenSubscriptionKey] = set()
         self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name=self.component_name,)
@@ -30,11 +35,10 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
         """최초 상태 동기화"""
         self.logger.info_start(description="Kraken 거래쌍 매니저 초기화",)
         init_desc_msg = "Redis에서 초기 거래쌍 로딩"
-        await self.redis_client.initialize_redis_client()
         await self.refresh(logging_msg=init_desc_msg)
         self.logger.info_success(description="Kraken 거래쌍 매니저 초기화",)
 
-    async def refresh(self, description: str) -> Tuple[Set[str], Set[str]]:
+    async def refresh(self, description: str) -> None:
         """
         Redis에서 최신 거래쌍을 불러오고,
         기존 거래쌍과 비교하여 (신규 구독, 구독 해제) 목록 반환
@@ -45,7 +49,7 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
             self.logger.info_start(description="활성 거래쌍 Refresh")
             redis_raw_data = await self._fetch_pairs_from_redis(description=description)
 
-            redis_pairs = [KrakenActivePairDataModel(**redis_raw_pair) for redis_raw_pair in redis_raw_data]
+            redis_pairs = [KrakenActivePairDataModel(**json.dumps(redis_raw_pair)) for redis_raw_pair in redis_raw_data]
             redis_subscription_keys = set([redis_pair.to_subscription_key() for redis_pair in redis_pairs])
 
             subscription_keys_to_add = redis_subscription_keys - self.current_active_subscription_key

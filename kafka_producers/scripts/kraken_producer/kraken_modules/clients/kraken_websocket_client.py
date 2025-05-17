@@ -20,14 +20,14 @@ class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponen
         self.retry_num: Optional[int] = config.retry_num or 5
         self.retry_delay: Optional[int] = config.retry_delay or 1
         self.conn_timeout: Optional[int] = config.conn_timeout or 20
-        self.init_subscription_msg: str = config.subscription_msg
 
         # 외부 객체
         self.kafka_client: KrakenKafkaClient =  kafka_client
         self.status_manager: KrakenProducerStatusManager = status_manager
 
         # 동적 초기화
-        self.component_name = f"WEB SOCKET CLIENT - {self.config.channel}"
+        self.init_subscription_msg: str = config.subscription_msg
+        self.component_name = f"{self.config.channel} CHANNEL - WEB SOCKET CLIENT"
         self.ws: websockets.connect = None
         self.logger = KrakenStdandardLogger(f"{self.component_name}")
 
