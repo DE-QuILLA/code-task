@@ -28,3 +28,6 @@ class KrakenProducerStatusCodeEnum(Enum):
 
     # -4. Data 없음
     NO_DATA = -4
+
+    # -5. (매니저 객체들) 관리할 객체 없음
+    NO_OBJECT_TO_MANAGE = -5

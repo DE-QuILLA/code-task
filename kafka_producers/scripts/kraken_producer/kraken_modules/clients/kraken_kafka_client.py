@@ -1,4 +1,5 @@
 from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
+from kraken_modules.config_models.kraken_kafka_client_configs import KrakenKafkaClientConfigModel
 from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenBaseHealthTrackedComponent
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
@@ -13,16 +14,16 @@ from zoneinfo import ZoneInfo
 import json
 
 class KrakenKafkaClient(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedComponent):
-    def __init__(self, bootstrap_server: str, status_manager: KrakenProducerStatusManager, health_topic_name: str, acks: Optional[str] = "1", retry_num: Optional[int] = 5, retry_delay: Optional[int] = 2, conn_timeout: Optional[int] = 20):
-        self.bootstrap_server = bootstrap_server
-        self.health_topic_name = health_topic_name or "__kafka_health_check"  # NOTE: 예시, 변경 가능
-        self.status_manager: KrakenProducerStatusManager = status_manager
-        self.conn_timeout = conn_timeout
-        self.retry_num = retry_num
-        self.retry_delay = retry_delay
-        self.acks = acks  # 현재 기본값 1(리더 브로커만 기다림), 향후 필요하면 상향 ("all" 등)
+    def __init__(self, config: KrakenKafkaClientConfigModel, status_manager: KrakenProducerStatusManager,):
+        self.bootstrap_server = config.bootstrap_server
+        self.health_topic_name = config.health_topic_name or "__kafka_health_check"  # NOTE: 예시, 변경 가능
+        self.component_name: str = config.component_name
+        self.conn_timeout = config.conn_timeout
+        self.retry_num = config.retry_num
+        self.retry_delay = config.retry_delay
+        self.acks = config.acks  # 현재 기본값 1(리더 브로커만 기다림), 향후 필요하면 상향 ("all" 등)
 
-        self.component_name: str = "KAFKA CLIENT"
+        self.status_manager: KrakenProducerStatusManager = status_manager
         self.producer: AIOKafkaProducer = None
         self.logger = KrakenStdandardLogger(
             logger_name=self.component_name,

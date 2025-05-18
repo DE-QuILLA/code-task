@@ -1,15 +1,32 @@
+# 외부 라이브러리
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+# config 모델
 from kraken_modules.config_models.kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
+from kraken_modules.config_models.kraken_redis_client_configs import KrakenRedisClientConfigModel
+from kraken_modules.config_models.kraken_active_pair_manager_config_model import KrakenActivePairManagerConfigModel
+from kraken_modules.config_models.kraken_kafka_client_configs import KrakenKafkaClientConfigModel
+from kraken_modules.config_models.kraken_websocket_client_configs import ALL_WEBSOCKET_CLIENT_CONFIG_MODELS
+
+# 내부 활용 객체
 from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
-from kraken_modules.clients.config_models.kraken_websocket_client_configs import ALL_WEBSOCKET_CLIENT_CONFIG_MODELS
-from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
-from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
-from kraken_modules.managers.kraken_active_pair_manager import KrakenActivePairDataModel, KrakrenActivePairManager
-from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
-from kraken_modules.clients.config_models.kraken_redis_client_configs import KrakenActivePairRedisClientConfigModel
-import logging
+from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
+from kraken_modules.managers.kraken_active_pair_manager import KrakenActivePairManager
+from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
+from kraken_modules.clients.kraken_websocket_client import KrakenWebSocketClient
+# from kraken_modules.config_models.kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
+# from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
+# from kraken_modules.config_models.kraken_websocket_client_configs import ALL_WEBSOCKET_CLIENT_CONFIG_MODELS
+
+# from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
+# from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
+# from kraken_modules.managers.kraken_active_pair_manager import KrakenActivePairDataModel, KrakrenActivePairManager
+# from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
+# from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
+# from kraken_modules.clients.config_models.kraken_redis_client_configs import KrakenActivePairRedisClientConfigModel
+# import logging
 
 # from kraken_producer_core.kraken_websocket_manager import KrakenWebSocketManager
 # from kafka.kraken_kafka_client import KrakenKafkaClient
@@ -22,22 +39,58 @@ import logging
 @asynccontextmanager
 async def lifespan(kraken_fast_api_app: FastAPI, api_level_logger: KrakenStdandardLogger):
     try:
+        # 1. STATUS MANAGER
         api_level_logger.info_start("상태 매니저 초기화")
-        websocket_manager = KrakenProducerStatusManager(kafka_client, active_pair_manager, ALL_WEBSOCKET_CLIENT_CONFIG_MODELS)
+        kraken_status_manager: KrakenProducerStatusManager = KrakenProducerStatusManager()
         api_level_logger.info_start("상태 매니저 초기화")
 
+        # 2. REDIS CLIENT
         api_level_logger.info_start("Redis Client 연결")
-        redis_client = KrakenRedisClient(KrakenActivePairRedisClientConfigModel().input_params)
+        redis_config = KrakenRedisClientConfigModel(
+            redis_url="redis://redis-master.redis.svc.cluster.local:6379/0",
+            retry_num=5,
+            retry_delay=2,
+            conn_timeout=10,
+            component_name="REDIS CLIENT"
+        )
+        redis_client = KrakenRedisClient(config=redis_config, status_manager=kraken_status_manager)
+        await redis_client.initialize_redis_client()
         api_level_logger.info_success(f"Redis Client 연결")
 
+        # 3. ACTIVE PAIR MANAGER
         api_level_logger.info_start("Redis에서 거래쌍 정보 초기화")
-        active_pair_manager = KrakrenActivePairManager(redis_client)
-        active_pair_manager.get_current_active_pairs()
+        active_pair_manager_config = KrakenActivePairManagerConfigModel(
+            redis_key="kraken:active_pair",  # 필요 시 수정
+            component_name="ACTIVE PAIR MANAGER",
+            retry_num=5,
+            retry_delay=2,
+            conn_timeout=20,
+        )
+        active_pair_manager = KrakenActivePairManager(redis_client=redis_client, config=active_pair_manager_config,)
+        active_pair_manager.initialize_active_pair_manager()
         api_level_logger.info_success("Redis에서 거래쌍 정보 초기화")
 
+        # 4. KAFKA CLIENT
         api_level_logger.info_start("Kafka Client 연결")
-        kafka_client = KrakenKafkaClient()
+        kafka_client_config = KrakenKafkaClientConfigModel(
+            bootstrap_server="de-quilla-kafka-cluster.kafka-1.9092",
+            health_topic_name="__kafka_health_check",
+            status_manager=kraken_status_manager,
+            acks="1",  # NOTE: 변경될 여지 있음
+            retry_num=5,
+            retry_delay=2,
+            conn_timeout=20,)
+        kafka_client = KrakenKafkaClient(config=kafka_client_config, status_manager=kraken_status_manager)
+        kafka_client.initialize_kafka_client()
         api_level_logger.info_success("Kafka Client 연결")
+
+        # 5. WEBSOCKET CLIENT들
+        api_level_logger.info_start("웹소켓 클라이언트 초기화")
+        websocket_clients = []
+        for config in ALL_WEBSOCKET_CLIENT_CONFIG_MODELS:
+            websocket_client = KrakenWebSocketClient(config=config, status_manager=kraken_status_manager, kafka_client=kafka_client)
+            websocket_clients.append(websocket_client)
+        api_level_logger.info_success("웹소켓 클라이언트 초기화")
 
         api_level_logger.info_start("웹소켓 매니저 초기화")
         websocket_manager = KrakenWebSocketManager(kafka_client, active_pair_manager, ALL_WEBSOCKET_CLIENT_CONFIG_MODELS)

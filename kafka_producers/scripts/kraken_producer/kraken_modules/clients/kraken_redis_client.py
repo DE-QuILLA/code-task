@@ -10,6 +10,12 @@ from kraken_modules.managers.kraken_producer_status_manager import KrakenProduce
 from kraken_modules.config_models.kraken_redis_client_configs import KrakenRedisClientConfigModel
 
 
+# redis_url: str = "redis://redis-master.redis.svc.cluster.local:6379/0"
+#     retry_num: Optional[int] = 5
+#     retry_delay: Optional[int] = 2
+#     conn_timeout: Optional[int] = 10
+#     component_name: str = "REDIS CLIENT"
+
 class KrakenRedisClient(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedComponent):
     """
     Redis 인스턴스와의 연결을 나타내는 객체

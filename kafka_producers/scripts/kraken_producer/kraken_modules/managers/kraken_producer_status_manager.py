@@ -27,8 +27,9 @@ class KrakenProducerComponentHealthStatus(BaseModel):
 
 class KrakenProducerStatusManager(KrakenBaseComponentWithConfig):
     def __init__(self):
+        self.component_name: str = "STATUS MANAGER"
         self._status_map: Dict[str, KrakenProducerComponentHealthStatus] = {}
-        self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name="STATUS MANAGER")
+        self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name=self.component_name)
 
     async def register_component(self, component_name: str, new_component: KrakenBaseHealthTrackedComponent):
         """새로운 상태 관리 컴포넌트 등록"""

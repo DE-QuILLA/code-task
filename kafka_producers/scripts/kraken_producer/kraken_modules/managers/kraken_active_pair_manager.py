@@ -8,6 +8,7 @@ from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
 from kraken_modules.utils.data_models.kraken_active_pair_data_model import KrakenActivePairDataModel, KrakenSubscriptionKey
 from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenBaseHealthTrackedComponent
 from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
+from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
 from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus
 from kraken_modules.config_models.kraken_active_pair_manager_config_model import KrakenActivePairManagerConfigModel
@@ -17,7 +18,7 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
     """
     Redis에서 구독 대상 거래쌍 정보를 불러오고, 현재 상태와 비교하여 변화 추적하는 클래스
     """
-    def __init__(self, redis_client: KrakenRedisClient, config: KrakenActivePairManagerConfigModel):
+    def __init__(self, redis_client: KrakenRedisClient, config: KrakenActivePairManagerConfigModel, status_manager: KrakenProducerStatusManager):
         # config 기반 초기화
         self.redis_key: str = config.redis_key
         self.retry_num: int = config.retry_num
@@ -25,8 +26,9 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
         self.conn_timeout: int = config.conn_timeout
         self.component_name: str = config.component_name
 
-        # 동적 초기화
+        # 동적 초기화, 외부 객체 주입
         self.redis_client: KrakenRedisClient = redis_client
+        self.status_manager: KrakenProducerStatusManager = status_manager
         self.current_active_pairs: List[KrakenActivePairDataModel] = list()
         self.current_active_subscription_key: Set[KrakenSubscriptionKey] = set()
         self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name=self.component_name,)
@@ -36,6 +38,7 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
         self.logger.info_start(description="Kraken 거래쌍 매니저 초기화",)
         init_desc_msg = "Redis에서 초기 거래쌍 로딩"
         await self.refresh(logging_msg=init_desc_msg)
+        await self.status_manager.register_component(component_name=self.component_name, new_component=self)
         self.logger.info_success(description="Kraken 거래쌍 매니저 초기화",)
 
     async def refresh(self, description: str) -> None:
@@ -103,7 +106,7 @@ class KrakenActivePairManager(KrakenBaseHealthTrackedComponent, KrakenBaseCompon
     async def check_component_health(self) -> KrakenProducerComponentHealthStatus:
         self.logger.info_start(description="ActivePairManager 헬스 체크")
         if self.current_active_pairs:
-            is_healthy = len(self.current) > 0
+            is_healthy = len(self.current_active_pairs) > 0
         else:
             is_healthy = False
         message = f"{len(self.current_active_pairs)}개의 거래쌍 데이터 저장 중" if is_healthy else "불러온 거래쌍 없음"

@@ -17,8 +17,6 @@ class KrakenBaseWebSocketClientConfigModel(KrakenBaseConfigModel, ABC):
 
     # 아래는 공통 설정들
     topic_name: str
-    # kafka_client: KrakenKafkaClient
-    # status_manager: KrakenProducerStatusManager
     retry_num: Optional[int] = 5
     retry_delay: Optional[int] = 1
     conn_timeout: Optional[int] = 20
@@ -34,15 +32,26 @@ class KrakenBaseWebSocketClientConfigModel(KrakenBaseConfigModel, ABC):
             "method": "subscribe",
             "params": self._params()
         })
+    
+    # TODO: API 명세 확인하고 수정해야함.
+    @property
+    def unsubscription_msg(self) -> Dict[str, Any]:
+        return json.dumps({
+            "mehtod": "unsubscribe",
+            "params": self._params()
+        })
 
 
 class KrakenTickerWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel):
     """Ticker 채널 구독용 설정 데이터 모델 - 거래쌍 별 기본 정보 조회"""
+    # 구독용 설정
     url: str = "wss://ws.kraken.com/v2"
     channel: str = "ticker"
     symbol: List[str] = []
     event_trigger: str = "trades"  # bbo / trades 선택 가능 각각 best-bid-offer price 변경 / 거래 발생
     snapshot: bool = True
+
+    topic_name: str = "kraken:ticker"
 
     def _params(self) -> Dict[str, Any]:
         """Ticker 구독 메시지 params 반환"""
@@ -63,7 +72,9 @@ class KrakenBookWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel)
     symbol: List[str] = []
     depth: int = 10  # 호가창 구분 개수를 의미, 가능한 값: [10, 25, 100, 500, 1000], 기본 10
     snapshot: bool = True
-    
+
+    topic_name: str = "kraken:book"
+
     def _params(self) -> Dict[str, Any]:
         """Book 구독 메시지 params 반환"""
         book_params = {
@@ -83,6 +94,8 @@ class KrakenCandleWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigMode
     interval: int = 1  # 캔들의 시간 단위를 의미, 가능한 값: [1, 5, 15, 30, 60, 240, 1440, 10080, 21600] => 분단위
     snapshot: bool = True
     
+    topic_name: str = "kraken:ohlc"
+
     def _params(self) -> Dict[str, Any]:
         """Candle 구독 메시지 params 반환"""
         candle_params = {
@@ -100,6 +113,8 @@ class KrakenTradeWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel
     channel: str = "trade"
     symbol: List[str] = []
     snapshot: bool = True
+
+    topic_name: str = "kraken:trade"
     
     def _params(self) -> Dict:
         """Trade 구독 메시지 params 반환"""

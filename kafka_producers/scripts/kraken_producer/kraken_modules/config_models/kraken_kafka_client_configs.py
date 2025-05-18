@@ -3,10 +3,10 @@ from kraken_modules.managers.kraken_producer_status_manager import KrakenProduce
 from kraken_modules.config_models.kraken_base_config_model import KrakenBaseConfigModel
 from typing import Dict, Optional
 
-class KrakenBaseKafkaClientConfigModel(KrakenBaseConfigModel):
+class KrakenKafkaClientConfigModel(KrakenBaseConfigModel):
     bootstrap_server: str
     health_topic_name: str
-    status_manager: KrakenProducerStatusManager
+    component_name: str = "KAFKA CLIENT"
     acks: Optional[str] = "1"
     retry_num: Optional[int] = 5
     retry_delay: Optional[int] = 2
