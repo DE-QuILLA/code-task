@@ -1,41 +1,36 @@
 from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-from typing import Callable, Any, Coroutine, Optional, Dict
-from kraken_modules.utils.logging.kraken_stdout_logger import get_repeated_failure_msg, get_repeated_start_info_msg, get_repeated_success_info_msg
+from typing import Callable, Any, Coroutine, Optional, Dict, Tuple
+from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
+from kraken_modules.config_models.kraken_base_config_model import KrakenRetryConfig
 import async_timeout
-import logging
 
 async def custom_retry(
-    logger: logging.Logger,
-    retry_num: int,
-    retry_delay: int,
-    conn_timeout: int,
+    logger: KrakenStdandardLogger,
+    retry_config: KrakenRetryConfig,
     description: str,
     func: Callable[[], Coroutine[Any, Any, Any]],
-    func_kwargs: Optional[Dict[str, Any]],
+    func_kwargs: Optional[Dict[str, Any]] = None,
+    func_args: Optional[Tuple[Any]] = None,
 ) -> Any:
-    async with async_timeout.timeout(conn_timeout):
+    async with async_timeout.timeout(retry_config.conn_timeout):
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(retry_num),
-            wait=wait_fixed(retry_delay)
+            stop=stop_after_attempt(retry_config.retry_num),
+            wait=wait_fixed(retry_config.retry_delay)
         ):
             with attempt:
                 try:
-                    logger.info(get_repeated_start_info_msg(current_attempt_count=attempt.retry_state.attempt_number, retry_num=retry_num, description=description,))
-                    result = await func(**(func_kwargs or {}))
-                    logger.info(get_repeated_success_info_msg(current_attempt_count=attempt.retry_state.attempt_number, retry_num=retry_num, description=description,))
+                    logger.info_retry_start(attempt=attempt.retry_state.attempt_number, retry_num=retry_config.retry_num, retry_delay=retry_config.retry_delay,)
+                    func_args = func_args or ()
+                    func_kwargs = func_kwargs or {}
+                    result = await func(*func_args, **func_kwargs)
+                    logger.info_retry_success(attempt=attempt.retry_state.attempt_number, retry_num=retry_config.retry_num, retry_delay=retry_config.retry_delay,)
                     return result
                 except Exception as e:
-                    logger.warning(get_repeated_failure_msg(
+                    logger.exception_retry_failure(
+                        attempt=attempt.retry_state.attempt_number,
                         description=description,
-                        current_attempt_count=attempt.retry_state.attempt_number,
-                        retry_num=retry_num,
-                        error_object=e,
-                    ))
-                    if attempt.retry_state.attempt_number >= retry_num:
-                        logger.exception(get_repeated_failure_msg(
-                            description=description,
-                            current_attempt_count=attempt.retry_state.attempt_number,
-                            retry_num=retry_num,
-                            error_object=e,
-                        ))
-                        raise e
+                        retry_num=retry_config.retry_num,
+                        error=e
+                    )
+                    if attempt.retry_state.attempt_number >= retry_config.retry_num:
+                        raise

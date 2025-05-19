@@ -15,14 +15,19 @@ import json
 
 class KrakenKafkaClient(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedComponent):
     def __init__(self, config: KrakenKafkaClientConfigModel, status_manager: KrakenProducerStatusManager,):
-        self.bootstrap_server = config.bootstrap_server
-        self.health_topic_name = config.health_topic_name or "__kafka_health_check"  # NOTE: 예시, 변경 가능
-        self.component_name: str = config.component_name
-        self.conn_timeout = config.conn_timeout
-        self.retry_num = config.retry_num
-        self.retry_delay = config.retry_delay
-        self.acks = config.acks  # 현재 기본값 1(리더 브로커만 기다림), 향후 필요하면 상향 ("all" 등)
+        # config 객체 저장
+        self.config = config
 
+        # config 객체 기반 초기화
+        self.bootstrap_server: str = config.bootstrap_server
+        self.health_topic_name: str = config.health_topic_name or "__kafka_health_check"  # NOTE: 예시, 변경 가능
+        self.component_name: str = config.component_name
+        self.retry_num: int = config.retry_num
+        self.retry_delay: int = config.retry_delay
+        self.conn_timeout: int = config.conn_timeout
+        self.acks: str = config.acks  # 현재 기본값 1(리더 브로커만 기다림), 향후 필요하면 상향 ("all" 등)
+
+        # 외부 객체 혹은 동적 초기화
         self.status_manager: KrakenProducerStatusManager = status_manager
         self.producer: AIOKafkaProducer = None
         self.logger = KrakenStdandardLogger(

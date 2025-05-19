@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
 import json
 from typing import Dict, Optional, List, Any
@@ -12,7 +11,9 @@ class KrakenBaseWebSocketClientConfigModel(KrakenBaseConfigModel, ABC):
     # 구독관련 설정 - 채널마다 오버라이드
     url: str
     channel: str
-    symbol: Optional[List[str]]
+    symbol: List[str]
+    last_subscribe_symbol: Optional[List[str]] = []
+    last_unsubscribe_symbol: Optional[List[str]] = []
     snapshot: Optional[bool] = True
 
     # 아래는 공통 설정들
@@ -22,24 +23,33 @@ class KrakenBaseWebSocketClientConfigModel(KrakenBaseConfigModel, ABC):
     conn_timeout: Optional[int] = 20
 
     @abstractmethod
-    def _params(self) -> Dict[str, Any]:
+    def _subscribe_params(self) -> Dict[str, Any]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _unsubscribe_params(self) -> Dict[str, Any]:
         raise NotImplementedError
 
     @property
     def subscription_msg(self) -> Dict[str, Any]:
-        """구독 메시지 반환"""
+        """최초 구독 메시지 반환"""
         return json.dumps({
             "method": "subscribe",
-            "params": self._params()
+            "params": self._add_base_currency_to_symobols(self._subscribe_params())
         })
-    
-    # TODO: API 명세 확인하고 수정해야함.
+
     @property
     def unsubscription_msg(self) -> Dict[str, Any]:
         return json.dumps({
             "mehtod": "unsubscribe",
-            "params": self._params()
+            "params": self._add_base_currency_to_symobols(self._unsubscribe_params())
         })
+    
+    @staticmethod
+    def _add_base_currency_to_symobols(params: Dict[str, Any]):
+        raw_symbols: List[str] = params["symbol"]
+        params["symbol"] = [func(symbol) for symbol in raw_symbols for func in (lambda x: x + '/KRW', lambda y: y + '/USD')]
+        return params
 
 
 class KrakenTickerWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel):
@@ -53,11 +63,20 @@ class KrakenTickerWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigMode
 
     topic_name: str = "kraken:ticker"
 
-    def _params(self) -> Dict[str, Any]:
+    def _subscribe_params(self) -> Dict[str, Any]:
         """Ticker 구독 메시지 params 반환"""
         ticker_params = {
                 "channel": self.channel,
-                "symbol": self.symbol,
+                "symbol": self.last_subscribe_symbol,
+                "evnet_trigger": self.event_trigger,
+                "snapshot": self.snapshot,
+            }
+        return ticker_params
+
+    def _unsubscribe_params(self):
+        ticker_params = {
+                "channel": self.channel,
+                "symbol": self.last_unsubscribe_symbol,
                 "evnet_trigger": self.event_trigger,
                 "snapshot": self.snapshot,
             }
@@ -75,11 +94,21 @@ class KrakenBookWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel)
 
     topic_name: str = "kraken:book"
 
-    def _params(self) -> Dict[str, Any]:
+    def _subscribe_params(self):
         """Book 구독 메시지 params 반환"""
         book_params = {
                 "channel": self.channel,
-                "symbol": self.symbol,
+                "symbol": self.last_subscribe_symbol,
+                "depth": self.depth,
+                "snapshot": self.snapshot,
+        }
+        return book_params
+    
+    def _unsubscribe_params(self):
+        """Book 구독 메시지 params 반환"""
+        book_params = {
+                "channel": self.channel,
+                "symbol": self.last_unsubscribe_symbol,
                 "depth": self.depth,
                 "snapshot": self.snapshot,
         }
@@ -96,15 +125,26 @@ class KrakenCandleWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigMode
     
     topic_name: str = "kraken:ohlc"
 
-    def _params(self) -> Dict[str, Any]:
+    def _subscribe_params(self):
         """Candle 구독 메시지 params 반환"""
         candle_params = {
                 "channel": self.channel,
-                "symbol": self.symbol,
+                "symbol": self.last_subscribe_symbol,
                 "interval": self.interval,
                 "snapshot": self.snapshot,
         }
         return candle_params
+    
+    def _unsubscribe_params(self):
+        """Candle 구독 메시지 params 반환"""
+        candle_params = {
+                "channel": self.channel,
+                "symbol": self.last_unsubscribe_symbol,
+                "interval": self.interval,
+                "snapshot": self.snapshot,
+        }
+        return candle_params
+        
 
 
 class KrakenTradeWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel):
@@ -116,22 +156,34 @@ class KrakenTradeWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel
 
     topic_name: str = "kraken:trade"
     
-    def _params(self) -> Dict:
+    def _subscribe_params(self):
         """Trade 구독 메시지 params 반환"""
         trade_params = {
                 "channel": self.channel,
-                "symbol": self.symbol,
+                "symbol": self.last_subscribe_symbol,
                 "snapshot": self.snapshot,
         }
         return trade_params
     
+    def _unsubscribe_params(self):
+        """Trade 구독 메시지 params 반환"""
+        trade_params = {
+                "channel": self.channel,
+                "symbol": self.last_unsubscribe_symbol,
+                "snapshot": self.snapshot,
+        }
+        return trade_params
+
 
 class KrakenPingWebSocketClientConfigModel(KrakenBaseWebSocketClientConfigModel):
     """PING 채널을 통해 연결이 살아있는지 확인하는 데에 사용"""
     url: str = "wss://ws.kraken.com/v2"
     channel: str = "ping"
 
-    def _params(self) -> Dict[str, Any]:
+    def _subscribe_params(self):
+        pass
+
+    def _unsubscribe_params(self):
         pass
 
     @property

@@ -1,17 +1,17 @@
 import asyncio
 import websockets
+from typing import Set
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
 from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
 from kraken_modules.config_models.kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
-from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
-from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenBaseHealthTrackedComponent
+from kraken_modules.interfaces.kraken_producer_base_component import KrakenBaseComponent
 from kraken_modules.utils.wrapper.retry_wrapper_function import custom_retry
 from typing import List, Optional
 
 
-class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponentWithConfig):
+class KrakenWebSocketClient(KrakenBaseComponent):
     def __init__(self, config: KrakenBaseWebSocketClientConfigModel, status_manager: KrakenProducerStatusManager, kafka_client: KrakenKafkaClient):
         self.config: KrakenBaseWebSocketClientConfigModel = config
 
@@ -32,12 +32,26 @@ class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponen
         self.websocket: websockets.connect = None
         self.logger = KrakenStdandardLogger(f"{self.component_name}")
 
-    async def initialize_websocket_client(self):
+    async def initialize_websocket_client(self, init_symbols: Set[str]):
+        self.logger.info_start(f"{self.component_name} 초기화")
         await self.connect()
         await self.subscribe(subscription_message=self.init_subscription_msg)
+        self.logger.info_success(f"{self.component_name} 초기화")
 
-    async def subscribe(self, sub_config: KrakenBaseWebSocketClientConfigModel):
-        await self.send(sub_config.subscription_msg)
+    async def update_symbols_and_subscriptions(self, new_total_symbols: List[str], new_sub_symobls: List[str], new_unsub_symbols: List[str]):
+        # 1. 갱신
+        self.config.symbol = new_total_symbols
+        self.config.last_subscribe_symbol = new_sub_symobls
+        self.config.last_unsubscribe_symbol = new_unsub_symbols
+
+        # 실제 구독 / 구독 취소
+        if self.config.last_subscribe_symbol:
+            await self.subscribe()
+        if self.config.last_unsubscribe_symbol:
+            await self.unsubscribe()
+
+    async def subscribe(self, ):
+        await self.send(self.config.subscription_msg)
 
     async def unsubscribe(self, unsub_config: KrakenBaseWebSocketClientConfigModel):
         await self.send(unsub_config.unsubscription_msg)
@@ -70,8 +84,7 @@ class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponen
         try:
             self.logger.info_start("메시지 수신 루프 시작")
             async for message in self.websocket:
-                # 여기서는 str로 옴 → Kafka에 그대로 넘김
-                await self.kafka_client.produce(message=message, topic_name=self.topic_name)
+                await self.kafka_client.produce(message=message, topic_name=self.topic_name)  # str로 들어와서 바로 json - dumps 없이 넘김
         except Exception as e:
             raise e
 
@@ -94,4 +107,5 @@ class KrakenWebSocketClient(KrakenBaseHealthTrackedComponent, KrakenBaseComponen
                 description="웹소켓 종료",
                 func=self.websocket.close,
                 func_kwargs={},
+                func_args=(),
             )

@@ -1,5 +1,5 @@
 from redis.asyncio import Redis
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set
 from kraken_modules.utils.logging.kraken_stdout_logger import KrakenStdandardLogger
 from kraken_modules.utils.data_models.kraken_active_pair_data_models import KrakenActivePairDataModel
 from kraken_modules.utils.wrappers.custrom_retry_wrapper import custom_retry
@@ -76,24 +76,50 @@ class KrakenRedisClient:
             retry_delay=self.retry_delay,
             conn_timeout=self.conn_timeout,
             description=f"[{redis_key}] KEY 데이터 GET ALL 요청",
-            func=self.redis.hgetall,
-            func_kwargs={"name": redis_key}
+            func=self.redis.smembers,
+            func_args=(redis_key,)
+        )
+    
+    async def delete_all_data(self, redis_key: str):
+        """특정 key의 모든 데이터를 삭제하는 기능"""
+        return await custom_retry(
+            logger=self.logger,
+            retry_num=self.retry_num,
+            retry_delay=self.retry_delay,
+            conn_timeout=self.conn_timeout,
+            description=f"[{redis_key}] KEY 데이터 DELETE 요청",
+            func=self.redis.delete,
+            func_args=(redis_key,)
+        )
+    
+    async def save_set_data(self, redis_key: str, new_data_set: Set[str]):
+        """특정 key에 데이터를 저장하는 함수"""
+        return await custom_retry(
+            logger=self.logger,
+            retry_num=self.retry_num,
+            retry_delay=self.retry_delay,
+            conn_timeout=self.conn_timeout,
+            description=f"[{redis_key}] KEY 데이터 SAVE 요청",
+            func=self.redis.sadd,
+            func_args=(redis_key, *new_data_set)
         )
 
-    async def update_if_changed(self, redis_key: str, new_data: Dict[str, Any]) -> List[str]:
+    async def update_if_changed(self, redis_key: str, new_data_set: Set[str]) -> bool:
         """기존 Redis 데이터와 비교 후 변경된 항목만 저장, Pipeline 사용 배치"""
+        self.logger.info_start(f"Redis {redis_key} 키 갱신")
         old_data = await self.fetch_all_data(redis_key=redis_key)
-        changed_keys = []
-        pipe = self.redis.pipeline()
+        old_data_set = set(old_data)
 
-        for wsname, new_val in new_data.items():
-            if old_data.get(wsname, {}) != new_val:
-                pipe.hset(redis_key, wsname, new_val)
-                changed_keys.append(wsname)
+        if old_data_set != new_data_set:
+            self.logger.warning_common("새로운 구독쌍 데이터")
+            await self.delete_all_data(redis_key=redis_key)
 
-        if changed_keys:
-            await pipe.execute()
-            self.logger.info_success(f"{len(changed_keys)}개 거래쌍 갱신")
+            if new_data_set:
+                await self.save_set_data(redis_key=redis_key, new_data=new_data_set)
+            
+            self.logger.info_success(f"Redis {redis_key} 키 갱신")
+            return True
         else:
-            self.logger.warning_common(f"어떠한 거래쌍도 갱신 없음")
-        return changed_keys
+            self.logger.warning_common("갱신할 구독쌍 데이터 없음")
+            return False
+

@@ -22,3 +22,6 @@ class KrakenRestApiJsonLoadsError(KrakenBaseError):
 class KrakenRestApiJsonDumpsError(KrakenBaseError):
     """Kraken Rest api의 응답을 Json dumps에 실패할 경우 발생하는 커스텀 Error"""
     pass
+
+class KrakenActivePairValueException(KrakenBaseError):
+    """Kraken Rest api 응답을 파싱하는 중 잘못된 input 시 발생하는 커스텀 Exception"""

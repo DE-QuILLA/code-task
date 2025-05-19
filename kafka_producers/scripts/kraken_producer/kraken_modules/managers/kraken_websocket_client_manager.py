@@ -4,38 +4,40 @@ from zoneinfo import ZoneInfo
 from typing import Dict, List
 from kraken_modules.clients.kraken_websocket_client import KrakenWebSocketClient
 from kraken_modules.config_models.kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel
+from kraken_modules.config_models.kraken_websocket_client_manager_config_model import KrakenWebSocketClientManagerConfigModel
 from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
 from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
 from kraken_modules.managers.kraken_active_pair_manager import KrakenActivePairManager
 from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
-from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
-from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenBaseHealthTrackedComponent
-from kraken_modules.interfaces.kraken_base_health_tracked_component import KrakenProducerComponentHealthStatus
+from kraken_modules.interfaces.kraken_producer_base_component import KrakenBaseComponent
 from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
 
-class KrakenWebSocketClientManager(KrakenBaseComponentWithConfig, KrakenBaseHealthTrackedComponent):
+class KrakenWebSocketClientManager(KrakenBaseComponent):
     def __init__(
         self,
+        config: KrakenWebSocketClientManagerConfigModel,
         client_config_list: List[KrakenBaseWebSocketClientConfigModel],
         status_manager: KrakenProducerStatusManager,
         kafka_client: KrakenKafkaClient,
         active_pair_manager: KrakenActivePairManager,
     ):
-        
+        # config 기반 초기화
+        self.component_name: str = config.component_name
         self.client_config_list = client_config_list
+
+        # 동적 초기화 혹은 외부 객체 주입
         self.active_pair_manager = active_pair_manager
         self.status_manager = status_manager
         self.kafka_client = kafka_client
-        self.component_name = "WEB SOCKET CLIENT MANAGER"
-        self.logger = KrakenStdandardLogger(self.component_name)
+        self.logger: KrakenStdandardLogger = KrakenStdandardLogger(self.component_name)
 
         # 클라이언트 목록 {topic_name: client}
         self.clients: Dict[str, KrakenWebSocketClient] = {}
 
     async def init_clients_manager(self, config_list: List[KrakenBaseWebSocketClientConfigModel]):
         self.logger.info_start("웹소켓 클라이언트 매니저 초기화")
-        self.status_manager.register_component(component_name=self.component_name, new_component=self,)
-        current_symbols = self.get_current_symbols()
+        await self.status_manager.register_component(component_name=self.component_name, new_component=self,)
+        current_symbols, new_symbols,  = self.get_current_symbols()
         for config in config_list:
             self.logger.info_start(f"{config.channel} 웹소켓 클라이언트 생성")
             channel = config.channel
@@ -46,14 +48,14 @@ class KrakenWebSocketClientManager(KrakenBaseComponentWithConfig, KrakenBaseHeal
         self.logger.info_success("웹소켓 클라이언트 매니저 초기화")
 
     async def start_all(self):
-        self.logger.info_start(f"{len(self.clients)} 개 클라이언트 동작")
+        self.logger.info_start(f"{len(self.clients)} 개 WebSocket 클라이언트 동작")
         tasks = [client.run() for client in self.clients.values()]
         await asyncio.gather(*tasks)
 
     async def stop_all(self):
-        self.logger.info("🛑 모든 WebSocket 클라이언트 중단")
-        for client in self.clients.values():
-            await client.close()
+        self.logger.info_start(f"{len(self.clients)} 개 WebSocket 클라이언트 중단")
+        tasks = [client.close() for client in self.clients.values()]
+        await asyncio.gather(*tasks)
 
     def get_client(self, topic: str) -> KrakenWebSocketClient:
         return self.clients.get(topic)
@@ -62,9 +64,7 @@ class KrakenWebSocketClientManager(KrakenBaseComponentWithConfig, KrakenBaseHeal
         return list(self.clients.keys())
 
     def get_current_symbols(self):
-        current_pairs = self.active_pair_manager.get_current_pairs()
-        subscription_key = [current_pair.to_subscription_key() for current_pair in current_pairs]
-        return [sub_key.wsname for sub_key in subscription_key]
+        return self.active_pair_manager.get_current_pairs()
 
     async def check_component_health(self) -> KrakenProducerComponentHealthStatus:
         if len(self.clients) > 0:
@@ -93,3 +93,13 @@ class KrakenWebSocketClientManager(KrakenBaseComponentWithConfig, KrakenBaseHeal
         - 필요 시 async 사용
         """
         self.status_manager.update_manager_status(component_name=self.component_name, new_status=self.check_component_health())
+    
+    async def reload_symbols(self):
+        new_total_symbols, new_subscription_symbols, new_unsubscription_symbols = await self.active_pair_manager.refresh()
+
+        for client in self.clients.values():
+            await client.update_symbols_and_subscriptions(
+                new_total_symbols=new_total_symbols,
+                new_sub_symobls=new_subscription_symbols,
+                new_unsub_symbols=new_unsubscription_symbols,
+            )

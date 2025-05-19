@@ -16,6 +16,7 @@ from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
 from kraken_modules.managers.kraken_active_pair_manager import KrakenActivePairManager
 from kraken_modules.clients.kraken_kafka_client import KrakenKafkaClient
 from kraken_modules.clients.kraken_websocket_client import KrakenWebSocketClient
+from kraken_modules.managers.kraken_websocket_client_manager import KrakenWebSocketClientManager
 # from kraken_modules.config_models.kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
 # from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
 # from kraken_modules.config_models.kraken_websocket_client_configs import ALL_WEBSOCKET_CLIENT_CONFIG_MODELS
@@ -86,30 +87,35 @@ async def lifespan(kraken_fast_api_app: FastAPI, api_level_logger: KrakenStdanda
 
         # 5. WEBSOCKET CLIENT들
         api_level_logger.info_start("웹소켓 클라이언트 초기화")
-        websocket_clients = []
+        websocket_client_config_list = []
         for config in ALL_WEBSOCKET_CLIENT_CONFIG_MODELS:
-            websocket_client = KrakenWebSocketClient(config=config, status_manager=kraken_status_manager, kafka_client=kafka_client)
-            websocket_clients.append(websocket_client)
+            websocket_client_config_list.append(config)
         api_level_logger.info_success("웹소켓 클라이언트 초기화")
 
         api_level_logger.info_start("웹소켓 매니저 초기화")
-        websocket_manager = KrakenWebSocketManager(kafka_client, active_pair_manager, ALL_WEBSOCKET_CLIENT_CONFIG_MODELS)
+        websocket_manager = KrakenWebSocketClientManager(
+            client_config_list=websocket_client_config_list,
+            status_manager=kraken_status_manager,
+            kafka_client=kafka_client,
+            active_pair_manager=active_pair_manager
+        )
+        websocket_manager.init_clients_manager()
         api_level_logger.info_success("웹소켓 매니저 초기화")
 
-        api_level_logger.info_start("웹소켓 매니저 초기화")
-        kraken_fast_api_app.state.websocket_manager: KrakenWebSocketManager = websocket_manager
-        kraken_fast_api_app.state.health_status = KrakenProducerStatusCodeEnum.STARTED
-        await kraken_fast_api_app.websocket_manager.start()
+        api_level_logger.info_start("Producer 전체 동작")
+        kraken_fast_api_app.state.websocket_manager = websocket_manager
+        kraken_fast_api_app.state.status_manager = kraken_status_manager
+        await kraken_fast_api_app.websocket_manager.start_all()
         yield {
             "status": "successfully started",
-            "status_code": kraken_fast_api_app.state.websocket_manager.get_all_health_status()
+            "status_code": await kraken_fast_api_app.state.status_manager.get_all_component_health_status()
             }
     except Exception as e:
         api_level_logger.exception_common(error=e, description="시작 실패")
         raise
     finally:
         api_level_logger.info_start("Kraken Producer 전체 종료")
-        await kraken_fast_api_app.websocket_manager.stop()
+        await kraken_fast_api_app.websocket_manager.stop_all()
         api_level_logger.info_success(f"Kraken Producer 전체 종료")
 
 def create_app(api_level_logger: KrakenStdandardLogger):

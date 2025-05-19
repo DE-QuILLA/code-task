@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import List, Dict, Literal, Optional
 from pydantic import BaseModel, field_validator
 
-class KrakenSubscriptionKey(BaseModel, frozen=True):
+class KrakenSubscriptionKey(BaseModel):
     class Config:
         frozen = True
 
@@ -86,3 +86,16 @@ class KrakenActivePairDataModel(BaseModel):
             raise e(
                 f"[{info.field_name}] 레버리지 리스트(List[int]) 변환 실패, 값: {v} 에러: ({type(e).__name__} - {e})"
             )
+
+
+class KrakenActiveSymbol(BaseModel):
+    """KRW, USD로 모두 거래 가능하며, 상태가 online인 심볼을 표현하는 데이터 모델"""
+    symbol: str
+    status: str = "online"
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def status_validator(cls, value):
+        if value != "online":
+            raise
+
