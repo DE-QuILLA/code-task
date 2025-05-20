@@ -1,5 +1,4 @@
-from kraken_modules.config_models.kraken_base_config_model import KrakenBaseConfigModel
-from typing import List
+from kraken_modules.config_models import KrakenBaseConfigModel
 
 
 class KrakenWebSocketClientManagerConfigModel(KrakenBaseConfigModel):

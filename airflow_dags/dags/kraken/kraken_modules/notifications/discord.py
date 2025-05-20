@@ -5,7 +5,7 @@ from kraken_modules.consts.time_consts import get_now_times
 import requests
 import logging
 
-# airflow 알림 채널 훅 URL
+# airflow 알림 채널 훅 URL - 디스코드 비밀채팅 참고하여 설정
 DISCORD_WEBHOOK = Variable.get("AIRFLOW_ALERT_DISCORD_WEBHOOK_URL")
 
 

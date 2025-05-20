@@ -9,13 +9,65 @@ class KrakenProducerBaseException(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-class KrakenProducerKafkaClientException(KrakenProducerBaseException):
-    """Kafka 연결 실패 시 발생하는 에러"""
+# Kafka Client Exceptions
+class KrakenProducerKafkaClientConnectionException(KrakenProducerBaseException):
+    """Kafka 연결 실패 시"""
     pass
+
+class KrakenProducerKafkaClientCloseFailureException(KrakenProducerBaseException):
+    """Kafka 클라이언트 종료 실패 시"""
+    pass
+
+
+class KrakenProducerNotValidMessageTypeException(KrakenProducerBaseException):
+    """str이 아닌 메시지 발생 시"""
+    pass
+
+class KrakenProducerProduceFailureException(KrakenProducerBaseException):
+    """메시지 produce 실패 시"""
+    pass
+
+
+# Redis Client Exceptions
 
 class KrakenProdcuerRedisConnectionException(KrakenProducerBaseException):
     """Redis 연결 실패 시 발생 에러"""
     pass
+
+
+class KrakenProdcuerRedisFetchDataException(KrakenProducerBaseException):
+    """Redis 연결 실패 시 발생 에러"""
+    pass
+
+class KrakenProdcuerRedisCloseFailureException(KrakenProducerBaseException):
+    """Redis 연결 실패 시 발생 에러"""
+    pass
+
+
+# Web Socket Client Exceptions
+
+class KrakenProducerWebSocketClientConnectionException(KrakenProducerBaseException):
+    pass
+
+class KrakenProducerWebSocketClientMessageSendFailureException(KrakenProducerBaseException):
+    pass
+
+class KrakenProducerWebSocketClientSubscriptionFailureException(KrakenProducerBaseException):
+    pass
+
+class KrakenProducerWebSocketClientUnsubscriptionFailureException(KrakenProducerBaseException):
+    pass
+
+
+# Active Pair Manager Exceptions
+
+class KrakenProducerWebSocketClientManagerRefreshException(KrakenProducerBaseException):
+    pass
+
+
+###
+
+
 
 class KrakenProdcuerActivePairTypeException(KrakenProducerBaseException):
     """활성화 거래쌍의 데이터 타입 에러"""
@@ -25,6 +77,7 @@ class KrakenProducerNotValidStatusCodeException(KrakenProducerBaseException):
     """존재하지 않는 상태 코드 인풋 에러"""
     pass
 
-class KrakenProducerNotValidMessageTypeException(KrakenProducerBaseException):
-    """Dict 혹은 str이 아닌 메시지 발생"""
-    pass
+
+
+ALL_CUSTOM_EXCEPTIONS = [KrakenProducerKafkaClientException, KrakenProdcuerRedisConnectionException, KrakenProdcuerActivePairTypeException, \
+                         KrakenProducerNotValidStatusCodeException, KrakenProducerNotValidMessageTypeException]

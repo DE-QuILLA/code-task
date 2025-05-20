@@ -2,13 +2,15 @@
 
 """
 주요 컴포넌트에서 초기화에 사용하는 config 객체 명세를 작성
+- KrakenRetryConfig: 공통적으로 사용하는 Retry에 대한 config
+- KrakenBaseConfigModel: Base 모델, 
 """
 
 from .kraken_base_config_model import KrakenRetryConfig, KrakenBaseConfigModel
-from .kraken_status_manager_config_model import KrakenStandardLoggerConfigModel
+from .kraken_status_manager_config_model import KrakenStatusManagerConfigModel
 from .kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
 from .kraken_redis_client_configs import KrakenRedisClientConfigModel
 from .kraken_active_pair_manager_config_model import KrakenActivePairManagerConfigModel
 from .kraken_kafka_client_configs import KrakenKafkaClientConfigModel
-from .kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel, ALL_WEBSOCKET_CLIENT_CONFIG_MODELS
+from .kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel, ALL_WEBSOCKET_CLIENT_CONFIG_MODELS, KrakenPingWebSocketClientConfigModel
 from .kraken_websocket_client_manager_config_model import KrakenWebSocketClientManagerConfigModel

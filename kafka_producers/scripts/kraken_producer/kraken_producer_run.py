@@ -2,10 +2,9 @@ import uvicorn
 import sys
 from uvicorn.config import Config
 from uvicorn.server import Server
-from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
-from kraken_modules.config_models.kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
-from kafka_producers.scripts.kraken_producer.kraken_modules.utils.enums.map_exceptions_to_exit_code import get_exitcode_from_exception
-from kraken_modules.utils.exceptions.kraken_custom_exceptions import KrakenProducerKafkaClientException
+from kraken_modules.logging import KrakenStdandardLogger
+from kraken_modules.config_models import KrakenStandardLoggerConfigModel
+from kraken_producer.kraken_modules.utils.mappings import get_exitcode_from_exception
 
 
 if __name__ == "__main__":

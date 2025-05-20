@@ -1,5 +1,5 @@
 from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-from typing import Callable, Any, Coroutine, Optional, Dict
+from typing import Callable, Any, Coroutine, Optional, Dict, Tuple
 from kraken_modules.utils.logging.kraken_stdout_logger import KrakenStdandardLogger
 import async_timeout
 

@@ -116,7 +116,7 @@ class KrakenActivePairsRestApiCollector(KrakenBaseRestApiCollector):
 
         for k, v in raw_data.items():
             wsname: str = v["wsname"]
-            base, quote = wsname.split("/")
+            base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
             status: str = v["status"]
             
             if quote in ("KRW", "USD") and status == "online":

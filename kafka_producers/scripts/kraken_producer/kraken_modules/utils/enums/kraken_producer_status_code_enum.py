@@ -31,3 +31,6 @@ class KrakenProducerStatusCodeEnum(Enum):
 
     # -5. (매니저 객체들) 관리할 객체 없음
     NO_OBJECT_TO_MANAGE = -5
+
+    # -6. 헬스체크 정보 수신되지 않음(웹소켓 heartbeat)
+    NO_HEART_BEAT = -6

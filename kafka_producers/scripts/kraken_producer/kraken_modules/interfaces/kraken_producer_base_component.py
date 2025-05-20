@@ -1,9 +1,11 @@
+# custom
+from kraken_modules.managers import KrakenProducerStatusManager
+from kraken_modules.data_models import KrakenProducerComponentHealthStatus
+from kraken_modules.config_models import KrakenBaseWebSocketClientConfigModel
+from kraken_modules.config_models import KrakenBaseConfigModel
+
+# libraries
 from abc import ABC, abstractmethod
-from typing import Tuple
-from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus
-from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
-from kraken_modules.config_models.kraken_websocket_client_configs import KrakenBaseWebSocketClientConfigModel
-from kraken_modules.config_models.kraken_base_config_model import KrakenBaseConfigModel
 
 
 class KrakenBaseComponent(ABC):
@@ -30,4 +32,5 @@ class KrakenBaseComponent(ABC):
         자신의 status를 업데이트하는 메소드
         - 필요 시 async 사용
         """
-        await self.status_manager.update_manager_status(component_name=self.config.component_name, new_status=self.check_component_health())
+        new_status = await self.check_component_health()
+        await self.status_manager.update_manager_status(component_name=self.config.component_name, new_status=new_status)

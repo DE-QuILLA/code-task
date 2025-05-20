@@ -9,7 +9,7 @@ from typing import Dict, Optional, Any
 class DeqPodOperator(KubernetesPodOperator):
     """
     KubernetesPodOperator를 확장한 ETL 로직 관련 파이썬 스크립트 실행용 Pod 생성 오퍼레이터
-
+    
     필수 파라미터
     :param script_path: Pod 내에서 실행할 엔트리포인트가 될 스크립트의 폴더 + 파일 경로(airflow_pod_scripts내의 경로) - ex) "kraken/some_script.py"
     
@@ -89,7 +89,9 @@ class DeqPodOperator(KubernetesPodOperator):
         )
 
     def _generate_arguments(self):
-        """실행에 넘길 아규먼트를 병합하여 리스트로 반환"""
+        """
+        실행에 넘길 아규먼트를 병합하여 리스트로 반환
+        """
         args = []
 
         for key, value in self.custom_args.items():

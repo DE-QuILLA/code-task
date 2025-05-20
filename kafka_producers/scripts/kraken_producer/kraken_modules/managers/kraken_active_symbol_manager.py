@@ -1,19 +1,21 @@
-import json
+# custom
+from kraken_modules.logging import KrakenStdandardLogger
+from kraken_modules.clients import KrakenRedisClient
+from kraken_modules.interfaces import KrakenBaseComponent
+from kraken_modules.managers import KrakenProducerStatusManager
+from kraken_modules.data_models import KrakenProducerComponentHealthStatus
+from kraken_modules.config_models import KrakenActivePairManagerConfigModel
+from kraken_modules.utils.enums import KrakenProducerStatusCodeEnum
+from kraken_modules.utils.wrapper import custom_retry
+from kraken_modules.utils.exceptions import KrakenProducerWebSocketClientManagerRefreshException
+
+# libraries
 from typing import Set, Tuple, List, Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from kraken_modules.logging.kraken_stdout_logger import KrakenStdandardLogger
-from kraken_modules.utils.wrapper.retry_wrapper_function import custom_retry
-from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
-from kraken_modules.utils.data_models.kraken_active_pair_data_model import KrakenActivePairDataModel, KrakenSubscriptionKey
-from kraken_modules.interfaces import KrakenBaseComponent
-from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerStatusManager
-from kraken_modules.utils.enums.kraken_producer_status_code_enum import KrakenProducerStatusCodeEnum
-from kraken_modules.managers.kraken_producer_status_manager import KrakenProducerComponentHealthStatus
-from kraken_modules.config_models import KrakenActivePairManagerConfigModel
 
 
-class KrakenActivePairManager(KrakenBaseComponent):
+class KrakenActiveSymbolManager(KrakenBaseComponent):
     """
     Redis에서 구독 대상 거래쌍 정보를 불러오고, 현재 상태와 비교하여 변화 추적하는 클래스
     """
@@ -25,18 +27,23 @@ class KrakenActivePairManager(KrakenBaseComponent):
         self.redis_client: KrakenRedisClient = redis_client
         self.status_manager: KrakenProducerStatusManager = status_manager
         self.current_active_symbols: Set[str] = set()
-        # self.current_active_subscription_key: Set[KrakenSubscriptionKey] = set()
         self.logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name=self.config.component_name,)
 
     async def initialize_active_pair_manager(self):
-        """최초 상태 동기화"""
-        self.logger.info_start(description="Kraken 거래쌍 매니저 초기화",)
-        init_desc_msg = "Redis에서 초기 거래쌍 로딩"
-        await self.refresh(logging_msg=init_desc_msg)
-        await self.status_manager.register_component(component_name=self.config.component_name, new_component=self)
-        self.logger.info_success(description="Kraken 거래쌍 매니저 초기화",)
+        """
+        최초 상태 동기화
+        """
+        try:
+            self.logger.info_start(description="Kraken 거래쌍 매니저 초기화",)
+            await self.refresh()
+            await self.status_manager.register_component(component_name=self.config.component_name, new_component=self)
+            self.logger.info_success(description="Kraken 거래쌍 매니저 초기화",)
+        except Exception as e:
+            self.logger.exception_common(error=e, description="Kraken 거래쌍 매니저 초기화",)
+            # 내부 에러 그대로 raise
+            raise
 
-    async def refresh(self, description: str) -> Tuple[Set[str], Set[str], Set[str]]:
+    async def refresh(self,) -> Tuple[Set[str], Set[str], Set[str]]:
         """
         Redis에서 거래소 별 symbol들을 불러와서
         기존 거래쌍과 비교하여 (신규 구독, 구독 해제) 목록 반환
@@ -62,18 +69,21 @@ class KrakenActivePairManager(KrakenBaseComponent):
 
             # 상태 업데이트
             self.current_active_symbols = new_kraken_symbols
-            self.logger.info_success(description="활성 심볼 Refresh")
+            self.logger.info_success(description=f"{len(self.current_active_symbols)}개 활성 심볼 Refresh")
 
             # KRW, USD 통화 붙혀서 리스트로 바꾸고 리턴하기
             return self._add_currency(new_kraken_symbols), self._add_currency(new_subscription_symbols), self._add_currency(new_unsubscription_symbols)
         except Exception as e:
             self.logger.exception_common(error=e, description="활성 심볼 Refresh")
-            raise e
+            raise KrakenProducerWebSocketClientManagerRefreshException("활성 심볼 Refresh 중 실패")
 
     @staticmethod
-    def _add_currency(symbols: Set[str]):
-        return [func(symbol) for symbol in symbols for func in (lambda x: x + '/KRW', lambda y: y + '/USD')]
-
+    def _add_currency(symbols: Set[str]) -> List[str]:
+        """
+        수집하는 기준 통화를 심볼에 붙혀주는 헬퍼
+        """
+        currencies = ['KRW', 'USD']
+        return [symbol + f'/{currency}' for symbol in symbols for currency in currencies]
 
     async def _fetch_pairs_from_redis(self, redis_key: str,) -> Set[str]:
         """
@@ -88,24 +98,28 @@ class KrakenActivePairManager(KrakenBaseComponent):
                 retry_config=self.config.retry_config,
                 description=description,
                 func=self.redis_client.fetch_all_data,
-                func_args=redis_key,
+                func_args=(redis_key,),
             )
             self.logger.info_success(f"Redis에서 {redis_key} 키의 거래쌍 정보 읽기")
             return redis_raw_data
         except Exception as e:
             self.logger.exception_common(error=e, description=f"Redis에서 {redis_key} 키의 거래쌍 정보 읽기")
-            raise e
+            # Redis Client 단의 에러를 그대로 raise
+            raise
 
-    def get_current_pairs(self) -> Optional[List[KrakenActivePairDataModel]]:
+    def get_current_pairs(self) -> List[str]:
         """현재 메모리에 저장된 거래쌍 반환"""
         if self.current_active_symbols:
             self.logger.warning_common(f"{len(self.current_active_symbols)} 개 거래쌍 조회")
-            return self.current_active_symbols.copy()
+            return self._add_currency(self.current_active_symbols)
         else:
             self.logger.warning_common("저장된 거래쌍 없는 상황에서 거래쌍 조회")
             return None
 
     async def check_component_health(self) -> KrakenProducerComponentHealthStatus:
+        """
+        Pair Manager의 헬스체크 함수
+        """
         self.logger.info_start(description="ActivePairManager 헬스 체크")
         if self.current_active_symbols:
             is_healthy = len(self.current_active_symbols) > 0
@@ -122,7 +136,6 @@ class KrakenActivePairManager(KrakenBaseComponent):
         )
         self.logger.info_success(description="ActivePairManager 헬스 체크 완료")
         return status
-
 
     async def update_component_status(self) -> bool:
         """

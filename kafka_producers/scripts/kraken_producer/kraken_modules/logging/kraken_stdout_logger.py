@@ -1,13 +1,12 @@
 import logging
 import sys
 import traceback
-from kraken_modules.config_models.kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
-from kraken_modules.interfaces.kraken_base_component_with_config import KrakenBaseComponentWithConfig
 
 
-class KrakenStdandardLogger(KrakenBaseComponentWithConfig):
+class KrakenStdandardLogger:
     """
     공통 로깅 포맷 및 핸들러 설정 제공 커스텀 로거 클래스
+    - 상태 관리 대상, Config 객체 기반 초기화에서 제외하는 컴포넌트.
     """
     def __init__(self, logger_name: str, logging_level: int = logging.DEBUG):
         self.logger = logging.getLogger(logger_name)

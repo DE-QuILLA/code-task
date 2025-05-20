@@ -1,8 +1,6 @@
-from exceptions.kraken_custom_exceptions import *
+from kraken_modules.utils.exceptions import *
 from enums.kraken_exit_code_enum import KrakenProducerExitCodeEnum
 from exceptions.kraken_success import KrakenScriptSuccess
-import asyncio
-import aiohttp
 import redis.asyncio as aioredis
 
 # 순서에 주의할 것 => 위에서 부터 하나씩 검사할 수 밖에 없음.

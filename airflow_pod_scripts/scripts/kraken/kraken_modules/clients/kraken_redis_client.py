@@ -41,7 +41,7 @@ class KrakenRedisClient:
                 self.close()
 
     async def _ping_with_retry(self, desc_override=None) -> bool:
-        description = "[REDIS PING]" or desc_override
+        description = desc_override or "[REDIS PING]"
         return await custom_retry(
             logger=self.logger,
             retry_num=self.retry_num,
