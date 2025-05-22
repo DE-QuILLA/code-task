@@ -38,14 +38,16 @@ with DAG(
         script_path="kraken/sync_kraken_active_pairs_script.py",
         custom_args={
             "api_url": Variable.get("kraken_api_url"),
+            "api_params": '{}',
+            "api_headers": '{}',
+
             "redis_url": Variable.get("redis_url"),
-            "redis_key": "kraken:active_pairs",
-            "producer_url": Variable.get("kraken_producer_url"),
-            "parmas": {},
-            "headers": {},
+            "redis_key": Variable.get("kraken_redis_key"),
+            "producer_urls": ','.join([Variable.get("kraken_producer_url"), Variable.get("upbit_producer_url"), Variable.get("binance_producer_url")]),
+
             "retry_num": 5,
             "retry_delay": 5,
-            "timeout": 120,
+            "conn_timeout": 120,
         },
         cpu_limit="1",
         memory_limit="1Gi",

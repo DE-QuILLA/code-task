@@ -1,7 +1,6 @@
 import logging
 import sys
 import traceback
-from typing import Optional, Type
 
 
 class KrakenStdandardLogger:

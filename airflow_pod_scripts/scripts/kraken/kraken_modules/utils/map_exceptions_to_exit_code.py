@@ -1,29 +1,36 @@
-from exceptions.kraken_custom_err import *
-from enums.kraken_enums import KrakenExitCodeEnum
-from exceptions.kraken_success import KrakenScriptSuccess
-import asyncio
-import aiohttp
-import redis.asyncio as aioredis
+from exceptions import (
+    # 1. Redis 관련 에러
+    KrakenRedisClientConnectionException,
+    KrakenRedisClientCanNotCloseException,
 
-# 순서에 주의할 것 => 위에서 부터 하나씩 검사할 수 밖에 없음.
-EXCEPTION_TO_EXIT_CODE = {
-    # 0. 커스텀 에러 객체
-    KrakenRestApiErrorInResponseError: KrakenExitCodeEnum.KRAKEN_API_ERROR_IN_RESPONSE_ERR,
-    KrakenRestApiNoDataError: KrakenExitCodeEnum.KRAKEN_API_NO_DATA_IN_RESPONSE_ERR,
-    KrakenRestApiJsonLoadsError: KrakenExitCodeEnum.JSON_LOAD_ERR,
-    KrakenRestApiJsonDumpsError: KrakenExitCodeEnum.JSON_DUMPS_ERR,
+    # 2. REST Client 관련 에러
+    KrakenRESTClientHTTPException,
 
-    # 1. asyncio 에러
-    asyncio.TimeoutError: KrakenExitCodeEnum.KRAKEN_API_TIMEOUT_ERR,
-    aiohttp.ClientError: KrakenExitCodeEnum.KRAKEN_API_HTTP_ERR,
+    # 3. Collector 관련 에러
+    KrakenErrorInAPIResponseException,
+    KrakenAPIResponseNoDataException,
+    KrakenAPIResponseValueException,
+    KrakenProducerAPICallFailException,
 
-    # 2. redis 관련 에러
-    aioredis.ConnectionError: KrakenExitCodeEnum.REDIS_CONNECTION_ERR,
-    aioredis.RedisError: KrakenExitCodeEnum.REDIS_ERR,
+    # 4. 성공
+    KrakenScriptSuccess
+)
+from enums import KrakenExitCodeEnum
 
-    # 3. 개발자 실수
-    NotImplementedError: KrakenExitCodeEnum.NOT_IMPLEMENTED_ERR,
-    TypeError: KrakenExitCodeEnum.INVALID_TYPE_ERR,
+
+EXCEPTION_TO_EXIT_ENUM = {
+    # 1. Redis Client 쪽 실패
+    KrakenRedisClientConnectionException: KrakenExitCodeEnum.REDIS_CONNECTION_ERR,
+    KrakenRedisClientCanNotCloseException: KrakenExitCodeEnum.REDIS_CANNOT_CLOSE_ERR,
+
+    # 2. REST Client 쪽 실패
+    KrakenRESTClientHTTPException: KrakenExitCodeEnum.API_HTTP_ERR,
+
+    # 3. API Collector 쪽 실패
+    KrakenErrorInAPIResponseException: KrakenExitCodeEnum.ERROR_IN_API_RESPONSE_ERR,
+    KrakenAPIResponseNoDataException: KrakenExitCodeEnum.NO_DATA_IN_API_RESPONSE_ERR,
+    KrakenAPIResponseValueException: KrakenExitCodeEnum.INVALID_KEY_VALUE_ERR,
+    KrakenProducerAPICallFailException: KrakenExitCodeEnum.PRODUCER_API_CALL_FAIL_ERR,
 
     # 4. 아직 정의되지 않은 에러의 경우
     Exception: KrakenExitCodeEnum.UNKNOWN_ERR,
@@ -32,7 +39,7 @@ EXCEPTION_TO_EXIT_CODE = {
     KrakenScriptSuccess: KrakenExitCodeEnum.SUCCESS,
 }
 
-def get_exitcode_from_exception(e: Exception):
-    for error, code in EXCEPTION_TO_EXIT_CODE:
+def get_exitcode_from_exception(e: Exception) -> int:
+    for error, code in EXCEPTION_TO_EXIT_ENUM.items():
         if isinstance(e, error):
             return code.value

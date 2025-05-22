@@ -1,14 +1,15 @@
-from typing import Dict, Any, Type, List, Set
-from abc import ABC, abstractmethod
-from kraken_modules.utils.exceptions.kraken_custom_err import KrakenRestApiErrorInResponseError, KrakenRestApiNoDataError
-from kraken_modules.utils.data_models.kraken_active_pair_data_models import KrakenActivePairDataModel
-from kraken_modules.utils.logging.kraken_stdout_logger import KrakenStdandardLogger
-from kraken_modules.utils.wrappers.custrom_retry_wrapper import custom_retry
-from kraken_modules.clients.kraken_redis_client import KrakenRedisClient
-from kraken_modules.clients.kraken_rest_client import KrakenRestClient
-from kraken_modules.utils.data_models.kraken_active_pair_data_models import KrakenActiveSymbol
+# libraries
 from aiohttp import ClientSession
-import redis.asyncio as aioredis
+from typing import Dict, Any, Set
+from abc import ABC, abstractmethod
+
+# custom
+from kraken_modules.utils.exceptions import KrakenErrorInAPIResponseException, KrakenAPIResponseNoDataException, KrakenAPIResponseValueException, KrakenProducerAPICallFailException
+from kraken_modules.utils.logging import KrakenStdandardLogger
+from kraken_modules.utils.wrappers import custom_retry
+from kraken_modules.clients import KrakenRedisClient
+from kraken_modules.clients import KrakenRESTClient
+from kraken_modules.config_models import KrakenRESTAPICollectorConfigModel
 
 
 class KrakenBaseRestApiCollector(ABC):
@@ -48,27 +49,18 @@ class KrakenBaseRestApiCollector(ABC):
         raise NotImplementedError
 
 
-class KrakenActivePairsRestApiCollector(KrakenBaseRestApiCollector):
+class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
     """
     크라켄에서 REST API를 기반으로 활성화된 거래쌍을 수집하여 Redis에 저장하는 Collector
     """
-    def __init__(self, api_url: str, redis_url: str, redis_key: str, producer_url: str, api_params: Dict[str, Any] = None, api_headers: Dict[str, Any] = None, retry_num: int = 5, retry_delay: int = 2, conn_timeout: int = 20,):
-        self.api_url = api_url
-        self.redis_url = redis_url
-        self.redis_key = redis_key
-        self.producer_url = producer_url
-        self.api_params = api_params or {}
-        self.api_headers = api_headers or {}
-        self.retry_num = retry_num
-        self.retry_delay = retry_delay
-        self.conn_timeout = conn_timeout
-        self.logger = KrakenStdandardLogger("KRAKEN ACTIVE PAIR REST API COLLECTOR")
-
-        self._initialize()
-
-    def _initialize(self,):
-        self.redis_client = KrakenRedisClient(redis_url=self.redis_url, )
-        self.rest_client = KrakenRestClient(base_url=self.api_url, headers=self.api_headers,)
+    def __init__(self, config: KrakenRESTAPICollectorConfigModel, redis_client: KrakenRedisClient, rest_client: KrakenRESTClient):
+        # config 저장
+        self.config = config
+        
+        # 외부객체
+        self.redis_client: KrakenRedisClient = redis_client
+        self.rest_client: KrakenRESTClient = rest_client
+        self.logger = KrakenStdandardLogger(logger_name=self.config.component_name)
 
     async def run(self):
         self.logger.info_start("거래쌍 목록 INGESTION")
@@ -91,58 +83,88 @@ class KrakenActivePairsRestApiCollector(KrakenBaseRestApiCollector):
             self.logger.info_start("데이터 변경 감지되지 않아 작업 종료")
 
     async def _extract(self, ):
-        """크라켄 API에서 거래쌍 목록을 가져옴"""
-        raw_data = await self.rest_client.fetch(path="some_path", params=self.api_params,)
+        """
+        크라켄 API에서 거래쌍 목록을 가져옴
+        """
+        raw_data = await self.rest_client.fetch(path="some_path", headers=self.config.api_headers, params=self.config.api_params,)
 
         if raw_data.get("error", []):
-            self.logger.exception_common(error=KrakenRestApiErrorInResponseError, desc="크라켄 거래쌍 API ERROR 반환")
-            raise KrakenRestApiErrorInResponseError(f"크라켄 거래쌍 API로부터 에러 보고됨!: {', '.join(raw_data.get('error', []))}")
+            e = KrakenErrorInAPIResponseException(f"Kraken API Error 응답: {', '.join(raw_data['error'])}")
+            self.logger.exception_common(error=e, description="크라켄 활성 symbol 수집")
+            raise e
 
         if raw_data.get("result", {}):
             self.logger.info_success(f"{len(raw_data.get('result', {}))}개 거래쌍 수집")
             return raw_data["result"]
         else:
-            self.logger.warning_common(desc=f"크라켄 거래쌍 API 데이터 반환하지 않음",)
-            raise KrakenRestApiNoDataError("크라켄 거래상 API로 부터 반환된 데이터 없음!")
+            self.logger.warning_common(description=f"비어있는 API 응답 데이터",)
+            raise KrakenAPIResponseNoDataException("Kraken API 비어있는 응답 발생")
 
     def _transform(self, raw_data: Dict[str, Any]) -> Set[str]:
         """
-        불러온 데이터를 간단히 파싱하여 아래와 같이 필터링하여 symbol 형태로 반환함
+        불러온 데이터를 파싱, 아래 기준으로 필터링 => symbol의 Set[str] 형태로 반환
         - status 필드가 online(정상 거래 가능)
         - 기준 통화가 USD 혹은 KRW인 경우
         """
+        self.logger.info_start(f"{len(raw_data)} 거래쌍 심볼 transform")
         krw_base_pairs = set()
         usd_base_pairs = set()
 
         for k, v in raw_data.items():
-            wsname: str = v["wsname"]
-            base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
-            status: str = v["status"]
-            
+            try:
+                wsname: str = v["wsname"]
+                base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
+                status: str = v["status"]
+
+                # 혹시나 Upper로 바꾸기
+                wsname = wsname.upper()
+                base, quote = base.upper(), quote.upper()
+            except (KeyError, ValueError) as e:
+                self.logger.exception_common(f"활성 Symbol 처리")
+                raise KrakenAPIResponseValueException(f"wsname, status 정보 처리 중 예외 발생\n{k} : {v}")
+            except Exception as e:
+                self.logger.exception_common(f"활성 Symbol 처리")
+                raise
+
             if quote in ("KRW", "USD") and status == "online":
                 if quote == "KRW":
+                    self.logger.logger.info(f"KRW 기준 활성 거래쌍: {wsname}")
                     krw_base_pairs.add(base)
                 else:
+                    self.logger.logger.info(f"USD 기준 활성 거래쌍: {wsname}")
                     usd_base_pairs.add(base)
             else:
-                self.logger.warning_common("KRW/USD가 아니거나 status가 online이 아닌 데이터")
+                self.logger.logger.info(f"KRW/USD 기준 통화가 아니거나 online 상태가 아닌 거래쌍: {wsname}")
 
-        return krw_base_pairs & usd_base_pairs
-
+        result = krw_base_pairs & usd_base_pairs
+        self.logger.info_success(f"{len(result)} 개 활성 symbol 처리")
+        return result
 
     async def _load(self, transformed_data: Set[str]):
-        changed_flag = await self.redis_client.update_if_changed(redis_key=self.redis_key, new_data=transformed_data)
+        """
+        적재 로직, Redis Client에서 변화가 있는지 확인하여 적재, 변화가 발생 시 True, 아닐 시 False 리턴
+        """
+        changed_flag = await self.redis_client.update_if_changed(redis_key=self.config.kraken_redis_key, new_data=transformed_data)
         return changed_flag
 
-
     async def _update_producer(self,):
+        """
+        Redis 단에 변경 발생시 실행, Producer의 api /reload 엔드포인트 호출하여 심볼 reload 지시
+        """
+        fail_urls = []
         async with ClientSession() as session:
-            await custom_retry(
-                logger=self.logger,
-                retry_num=self.retry_num,
-                retry_delay=self.retry_delay,
-                conn_timeout=self.conn_timeout,
-                description="Kraken Producer /reload 호출",
-                func=lambda: session.post(self.producer_url, json={"changed": True}),
-                func_kwargs=None,
-            )
+            # NOTE: producer_url 초기화 시 "http://<host>:<port>/reload" 형식이 되어야 함에 주의(엔드포인트 포함)
+            for producer_url in self.config.producer_urls:
+                try:
+                    await custom_retry(
+                        logger=self.logger,
+                        retry_config=self.config.retry_config,
+                        description="Kraken Producer /reload 호출",
+                        func=lambda: session.post(producer_url, json={"changed": "kraken"}),
+                        func_kwargs=None,
+                    )
+                except Exception as e:
+                    fail_urls.append(producer_url)
+
+            if len(fail_urls) > 0:
+                raise KrakenProducerAPICallFailException(f"[{', '.join(fail_urls)}] ({len(fail_urls)} 개) 호출 실패")
