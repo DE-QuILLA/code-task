@@ -84,11 +84,11 @@ class KrakenWebSocketClient(KrakenBaseComponent):
 
     async def send(self, message: str):
         try:
-            self.logger.info_start(f"{self.config.channel} 채널로 메시지 전송")
+            self.logger.info_start(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
             await self._send_with_retry(message=message)
-            self.logger.info_success(f"{self.config.channel} 채널로 메시지 전송")
+            self.logger.info_success(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
         except Exception as e:
-            self.logger.exception_common(f"{self.config.channel} 채널로 메시지 전송")
+            self.logger.exception_common(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
             error_msg = f"{self.config.channel} 채널로 메시지 전송 실패\n" + f"메시지: \n{json.dumps(message, indent=2, ensure_ascii=False)}"
             raise KrakenProducerWebSocketClientMessageSendFailureException(error_msg)
 
@@ -102,7 +102,6 @@ class KrakenWebSocketClient(KrakenBaseComponent):
         )
 
     async def listen(self):
-        
         try:
             self.logger.info_start("메시지 수신 루프 시작")
             async for message in self.websocket:

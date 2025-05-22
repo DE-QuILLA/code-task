@@ -18,8 +18,8 @@ if __name__ == "__main__":
 
     exit_code = 0
     try:
-        shoud_exit = server.run()
-        if not shoud_exit:
+        should_exit = server.run()
+        if not should_exit:
             uvicorn_level_logger.warning_common(description="서버 비명시적 종료")
     except Exception as e:
         uvicorn_level_logger.exception_common(error=e, description="서버 실행 중 에러 발생",)

@@ -128,6 +128,5 @@ def create_app(api_level_logger: KrakenStdandardLogger):
 
 
 if __name__=="__main__":
-    api_level_logger_config = KrakenStandardLoggerConfigModel(logger_name = "FAST API APP",)
-    api_level_logger: KrakenStdandardLogger = KrakenStdandardLogger.from_config(config_model=api_level_logger_config)
+    api_level_logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name = "FAST API APP")
     kraken_fast_api_app = create_app(api_level_logger=api_level_logger)

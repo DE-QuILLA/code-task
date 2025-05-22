@@ -1,24 +1,51 @@
-from kraken_modules.utils.exceptions import *
 from enums.kraken_exit_code_enum import KrakenProducerExitCodeEnum
-from exceptions.kraken_success import KrakenScriptSuccess
-import redis.asyncio as aioredis
+from kraken_modules.utils.exceptions import (
+    # Kafka Client
+    KrakenProducerKafkaClientCloseFailureException,
+    KrakenProducerKafkaClientConnectionException,
+    KrakenProducerNotValidMessageTypeException,
+    KrakenProducerProduceFailureException,
+
+    # Redis Client
+    KrakenProdcuerRedisConnectionException,
+    KrakenProdcuerRedisFetchDataException,
+    KrakenProdcuerRedisCloseFailureException,
+
+    # Web Socket Client
+    KrakenProducerWebSocketClientConnectionException,
+    KrakenProducerWebSocketClientMessageSendFailureException,
+    KrakenProducerWebSocketClientSubscriptionFailureException, 
+    KrakenProducerWebSocketClientUnsubscriptionFailureException,
+
+    # Active Symbol Manager
+    KrakenProducerActiveSymbolManagerRefreshException,
+
+    # ALL CUSTOM EXCEPTIONS
+    ALL_CUSTOM_EXCEPTIONS,
+
+    # SUCCESS
+    KrakenScriptSuccess,
+)
+
 
 # 순서에 주의할 것 => 위에서 부터 하나씩 검사할 수 밖에 없음.
 EXCEPTION_TO_EXIT_CODE = {
-    # 0. 커스텀 에러 객체
-    KrakenProducerKafkaClientException: KrakenProducerExitCodeEnum.KRAKEN_KAFKA_CLIENT_EXCEPTION,
+    # 1. Kafka Client
+    KrakenProducerKafkaClientCloseFailureException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_CLOSE_FAIL_ERR,
+    KrakenProducerKafkaClientConnectionException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_CONNECTION_FAIL_ERR,
+    KrakenProducerNotValidMessageTypeException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_INVALID_MESSAGE_ERR,
+    KrakenProducerProduceFailureException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_PRODUCE_FAIL_ERR,
 
-    # # 1. asyncio 에러
-    # asyncio.TimeoutError: KrakenExitCodeEnum.KRAKEN_API_TIMEOUT_ERR,
-    # aiohttp.ClientError: KrakenExitCodeEnum.KRAKEN_API_HTTP_ERR,
+    # 2. Redis Client
+    KrakenProdcuerRedisConnectionException: KrakenProducerExitCodeEnum.REDIS_CONNECTION_FAIL_ERR,
+    KrakenProdcuerRedisFetchDataException: KrakenProducerExitCodeEnum.REDIS_FETCH_FAIL_ERR,
+    KrakenProdcuerRedisCloseFailureException: KrakenProducerExitCodeEnum.REDIS_CLOSE_FAIL_ERR,
 
-    # # 2. redis 관련 에러
-    aioredis.ConnectionError: KrakenProducerBaseException.REDIS_CONNECTION_EXCEPTION,
-    # aioredis.RedisError: KrakenExitCodeEnum.REDIS_ERR,
-
-    # # 3. 개발자 실수
-    # NotImplementedError: KrakenExitCodeEnum.NOT_IMPLEMENTED_ERR,
-    # TypeError: KrakenExitCodeEnum.INVALID_TYPE_ERR,
+    # 3. Web Socket Client
+    KrakenProducerWebSocketClientConnectionException: KrakenProducerExitCodeEnum.WS_CONNECTION_FAIL_ERR,
+    KrakenProducerWebSocketClientMessageSendFailureException: KrakenProducerExitCodeEnum.WS_MESSAGE_SEND_FAIL_ERR,
+    KrakenProducerWebSocketClientSubscriptionFailureException: KrakenProducerExitCodeEnum.WS_SUBSCRIBE_FAIL_ERR, 
+    KrakenProducerWebSocketClientUnsubscriptionFailureException: KrakenProducerExitCodeEnum.WS_UNSUBSCRIBE_FAIL_ERR,
 
     # 4. 아직 정의되지 않은 에러의 경우
     Exception: KrakenProducerExitCodeEnum.UNKNOWN_EXCEPTION,

@@ -61,23 +61,12 @@ class KrakenProducerWebSocketClientUnsubscriptionFailureException(KrakenProducer
 
 # Active Pair Manager Exceptions
 
-class KrakenProducerWebSocketClientManagerRefreshException(KrakenProducerBaseException):
-    pass
-
-
-###
-
-
-
-class KrakenProdcuerActivePairTypeException(KrakenProducerBaseException):
-    """활성화 거래쌍의 데이터 타입 에러"""
-    pass
-
-class KrakenProducerNotValidStatusCodeException(KrakenProducerBaseException):
-    """존재하지 않는 상태 코드 인풋 에러"""
+class KrakenProducerActiveSymbolManagerRefreshException(KrakenProducerBaseException):
     pass
 
 
 
-ALL_CUSTOM_EXCEPTIONS = [KrakenProducerKafkaClientException, KrakenProdcuerRedisConnectionException, KrakenProdcuerActivePairTypeException, \
-                         KrakenProducerNotValidStatusCodeException, KrakenProducerNotValidMessageTypeException]
+ALL_CUSTOM_EXCEPTIONS = [KrakenProducerKafkaClientConnectionException, KrakenProducerKafkaClientCloseFailureException, KrakenProducerNotValidMessageTypeException, KrakenProducerProduceFailureException, \
+                        KrakenProdcuerRedisConnectionException, KrakenProdcuerRedisFetchDataException, KrakenProdcuerRedisCloseFailureException, \
+                        KrakenProducerWebSocketClientConnectionException, KrakenProducerWebSocketClientMessageSendFailureException, KrakenProducerWebSocketClientSubscriptionFailureException, KrakenProducerWebSocketClientUnsubscriptionFailureException, \
+                        KrakenProducerActiveSymbolManagerRefreshException,]

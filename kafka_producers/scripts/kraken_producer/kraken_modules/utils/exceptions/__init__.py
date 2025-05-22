@@ -21,18 +21,10 @@ from .kraken_custom_exceptions import KrakenProducerWebSocketClientMessageSendFa
 from .kraken_custom_exceptions import KrakenProducerWebSocketClientSubscriptionFailureException, KrakenProducerWebSocketClientUnsubscriptionFailureException
 
 # Active Pair Manager
-from .kraken_custom_exceptions import KrakenProducerWebSocketClientManagerRefreshException
+from .kraken_custom_exceptions import KrakenProducerActiveSymbolManagerRefreshException
 
-### 
+# ALL CUSTOM EXCEPTIONS
+from .kraken_custom_exceptions import ALL_CUSTOM_EXCEPTIONS
 
-
-
-from .kraken_custom_exceptions import KrakenProdcuerActivePairTypeException
-
-from .kraken_custom_exceptions import KrakenProducerBaseException
-
-
-from .kraken_custom_exceptions import KrakenProducerNotValidStatusCodeException
-from kraken_custom_exceptions import ALL_CUSTOM_EXCEPTIONS
-
+# SUCCESS
 from .kraken_success import KrakenScriptSuccess
