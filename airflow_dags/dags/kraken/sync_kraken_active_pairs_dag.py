@@ -6,11 +6,15 @@ from datetime import datetime, timezone, timedelta
 
 from kraken_modules.operators.deq_pod_operator import DeqPodOperator
 from kraken_modules.operators.fast_api_command_operator import FastApiCommandOperator
-from kraken_modules.notifications.discord import discord_success_callback, discord_failure_callback, discord_sla_miss_callback
+from kraken_modules.notifications.discord import (
+    discord_success_callback,
+    discord_failure_callback,
+    discord_sla_miss_callback,
+)
 
 default_args = {
     "owner": "gjstjd9509@gmail.com",
-    "start_date": datetime(2025, 1, 1, tzinfo=timezone('Asia/Seoul')),
+    "start_date": datetime(2025, 1, 1, tzinfo=timezone("Asia/Seoul")),
     "retries": 3,
 }
 
@@ -38,13 +42,17 @@ with DAG(
         script_path="kraken/sync_kraken_active_pairs_script.py",
         custom_args={
             "api_url": Variable.get("kraken_api_url"),
-            "api_params": '{}',
-            "api_headers": '{}',
-
+            "api_params": "{}",
+            "api_headers": "{}",
             "redis_url": Variable.get("redis_url"),
             "redis_key": Variable.get("kraken_redis_key"),
-            "producer_urls": ','.join([Variable.get("kraken_producer_url"), Variable.get("upbit_producer_url"), Variable.get("binance_producer_url")]),
-
+            "producer_urls": ",".join(
+                [
+                    Variable.get("kraken_producer_url"),
+                    Variable.get("upbit_producer_url"),
+                    Variable.get("binance_producer_url"),
+                ]
+            ),
             "retry_num": 5,
             "retry_delay": 5,
             "conn_timeout": 120,
@@ -55,8 +63,7 @@ with DAG(
     )
 
     wait_5_min_task = TimeDeltaSensor(
-        task_id="wait_5_min_task",
-        delta=timedelta(minutes=5)
+        task_id="wait_5_min_task", delta=timedelta(minutes=5)
     )
 
     fast_api_health_check_task = FastApiCommandOperator(
@@ -69,4 +76,10 @@ with DAG(
         tsak_id="end_sync_kraken_active_pairs_task",
     )
 
-    start_task >> sync_active_pairs_data_in_pod_task >> wait_5_min_task >> fast_api_health_check_task >> end_task
+    (
+        start_task
+        >> sync_active_pairs_data_in_pod_task
+        >> wait_5_min_task
+        >> fast_api_health_check_task
+        >> end_task
+    )

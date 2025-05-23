@@ -7,6 +7,7 @@ import pendulum
 NOW_KST = pendulum.now("Asia/Seoul")
 NOW_UTC = datetime.now(ZoneInfo("UTC"))
 
+
 # 함수 실행으로 코드 실행 당시의 시간 반환
 def get_now_times():
     """실행 시 KST, UTC 시간 반환"""

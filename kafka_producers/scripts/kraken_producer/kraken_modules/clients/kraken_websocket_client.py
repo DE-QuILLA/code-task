@@ -1,13 +1,21 @@
 # custom
 from kraken_modules.logging import KrakenStdandardLogger
 from kraken_modules.clients import KrakenKafkaClient
-from kraken_modules.config_models import KrakenBaseWebSocketClientConfigModel, KrakenPingWebSocketClientConfigModel
+from kraken_modules.config_models import (
+    KrakenBaseWebSocketClientConfigModel,
+    KrakenPingWebSocketClientConfigModel,
+)
 from kraken_modules.managers import KrakenProducerStatusManager
 from kraken_modules.data_models import KrakenProducerComponentHealthStatus
 from kraken_modules.utils.enums import KrakenProducerStatusCodeEnum
 from kraken_modules.interfaces import KrakenBaseComponent
 from kraken_modules.utils.wrapper import custom_retry
-from kraken_modules.utils.exceptions import KrakenProducerWebSocketClientConnectionException, KrakenProducerWebSocketClientMessageSendFailureException, KrakenProducerWebSocketClientSubscriptionFailureException, KrakenProducerWebSocketClientUnsubscriptionFailureException
+from kraken_modules.utils.exceptions import (
+    KrakenProducerWebSocketClientConnectionException,
+    KrakenProducerWebSocketClientMessageSendFailureException,
+    KrakenProducerWebSocketClientSubscriptionFailureException,
+    KrakenProducerWebSocketClientUnsubscriptionFailureException,
+)
 
 # libraries
 from typing import List, Optional
@@ -20,12 +28,17 @@ import re
 
 
 class KrakenWebSocketClient(KrakenBaseComponent):
-    def __init__(self, config: KrakenBaseWebSocketClientConfigModel, status_manager: KrakenProducerStatusManager, kafka_client: KrakenKafkaClient,):
+    def __init__(
+        self,
+        config: KrakenBaseWebSocketClientConfigModel,
+        status_manager: KrakenProducerStatusManager,
+        kafka_client: KrakenKafkaClient,
+    ):
         # config 객체 저장
         self.config: KrakenBaseWebSocketClientConfigModel = config
 
         # 외부 객체 주입
-        self.kafka_client: KrakenKafkaClient =  kafka_client
+        self.kafka_client: KrakenKafkaClient = kafka_client
         self.status_manager: KrakenProducerStatusManager = status_manager
 
         # 동적 초기화
@@ -34,7 +47,9 @@ class KrakenWebSocketClient(KrakenBaseComponent):
         self._last_heartbeat_at: datetime = None
         self.heartbeat_regex = re.compile(r'"channel"\s*:\s*"heartbeat"')
 
-    async def initialize_websocket_client(self,):
+    async def initialize_websocket_client(
+        self,
+    ):
         try:
             self.logger.info_start(f"{self.config.component_name} 초기화")
             await self.connect()
@@ -45,11 +60,20 @@ class KrakenWebSocketClient(KrakenBaseComponent):
             # NOTE: 내부 예외 그대로 raise
             raise
 
-    async def update_symbols_and_subscriptions(self, new_total_symbols: Optional[List[str]]=None, new_sub_symbols: Optional[List[str]]=None, new_unsub_symbols: Optional[List[str]]=None):
+    async def update_symbols_and_subscriptions(
+        self,
+        new_total_symbols: Optional[List[str]] = None,
+        new_sub_symbols: Optional[List[str]] = None,
+        new_unsub_symbols: Optional[List[str]] = None,
+    ):
         # 1. 갱신 - 초기화 시 사용도 고려, optional parameter 사용
         self.config.symbol = new_total_symbols or self.config.symbol
-        self.config.last_subscribe_symbol = new_sub_symbols or self.config.last_subscribe_symbol
-        self.config.last_unsubscribe_symbol = new_unsub_symbols or self.config.last_unsubscribe_symbol
+        self.config.last_subscribe_symbol = (
+            new_sub_symbols or self.config.last_subscribe_symbol
+        )
+        self.config.last_unsubscribe_symbol = (
+            new_unsub_symbols or self.config.last_unsubscribe_symbol
+        )
 
         # 실제 구독 / 구독 취소
         if self.config.last_subscribe_symbol:
@@ -57,17 +81,25 @@ class KrakenWebSocketClient(KrakenBaseComponent):
         if self.config.last_unsubscribe_symbol:
             await self.unsubscribe()
 
-    async def subscribe(self,):
+    async def subscribe(
+        self,
+    ):
         try:
             await self.send(self.config.subscription_msg)
         except Exception as e:
-            raise KrakenProducerWebSocketClientSubscriptionFailureException(f"{self.config.component_name} 구독 실패 \n구독 메시지: {self.config.subscription_msg}")
+            raise KrakenProducerWebSocketClientSubscriptionFailureException(
+                f"{self.config.component_name} 구독 실패 \n구독 메시지: {self.config.subscription_msg}"
+            )
 
-    async def unsubscribe(self,):
+    async def unsubscribe(
+        self,
+    ):
         try:
             await self.send(self.config.unsubscription_msg)
         except Exception as e:
-            raise KrakenProducerWebSocketClientUnsubscriptionFailureException(f"{self.config.component_name} 구독 취소 실패 \n구독 취소 메시지: {self.config.unsubscription_msg}")
+            raise KrakenProducerWebSocketClientUnsubscriptionFailureException(
+                f"{self.config.component_name} 구독 취소 실패 \n구독 취소 메시지: {self.config.unsubscription_msg}"
+            )
 
     async def connect(self):
         try:
@@ -76,20 +108,36 @@ class KrakenWebSocketClient(KrakenBaseComponent):
             self.logger.info_success(f"{self.config.channel} - 웹소켓 연결")
         except Exception as e:
             self.logger.exception_common(f"{self.config.channel} - 웹소켓 연결")
-            raise KrakenProducerWebSocketClientConnectionException(f"{self.config.channel} 웹소켓 연결 실패")
+            raise KrakenProducerWebSocketClientConnectionException(
+                f"{self.config.channel} 웹소켓 연결 실패"
+            )
 
     async def _connect_with_retry(self):
-        return await custom_retry(logger=self.logger, retry_config=self.config.retry_config, description=f"{self.config.channel} 웹소켓 연결",
-                           func=websockets.connect, func_args=(self.config.url,),)
+        return await custom_retry(
+            logger=self.logger,
+            retry_config=self.config.retry_config,
+            description=f"{self.config.channel} 웹소켓 연결",
+            func=websockets.connect,
+            func_args=(self.config.url,),
+        )
 
     async def send(self, message: str):
         try:
-            self.logger.info_start(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
+            self.logger.info_start(
+                f"{self.config.channel} 채널로 [{message}] 메시지 전송"
+            )
             await self._send_with_retry(message=message)
-            self.logger.info_success(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
+            self.logger.info_success(
+                f"{self.config.channel} 채널로 [{message}] 메시지 전송"
+            )
         except Exception as e:
-            self.logger.exception_common(f"{self.config.channel} 채널로 [{message}] 메시지 전송")
-            error_msg = f"{self.config.channel} 채널로 메시지 전송 실패\n" + f"메시지: \n{json.dumps(message, indent=2, ensure_ascii=False)}"
+            self.logger.exception_common(
+                f"{self.config.channel} 채널로 [{message}] 메시지 전송"
+            )
+            error_msg = (
+                f"{self.config.channel} 채널로 메시지 전송 실패\n"
+                + f"메시지: \n{json.dumps(message, indent=2, ensure_ascii=False)}"
+            )
             raise KrakenProducerWebSocketClientMessageSendFailureException(error_msg)
 
     async def _send_with_retry(self, message: str):
@@ -98,7 +146,7 @@ class KrakenWebSocketClient(KrakenBaseComponent):
             retry_config=self.config.retry_config,
             description=f"[{self.config.channel}] 채널에 [{message}] 메시지 전송",
             func=self.websocket.send,
-            func_args=(message,)
+            func_args=(message,),
         )
 
     async def listen(self):
@@ -107,22 +155,31 @@ class KrakenWebSocketClient(KrakenBaseComponent):
             async for message in self.websocket:
                 if self.heartbeat_regex.search(message):
                     self._last_heartbeat_at = datetime.now(ZoneInfo("Asia/Seoul"))
-                await self.kafka_client.produce(message=message, topic_name=self.config.topic_name)  # str로 들어와서 바로 json - dumps 없이 넘김
+                await self.kafka_client.produce(
+                    message=message, topic_name=self.config.topic_name
+                )  # str로 들어와서 바로 json - dumps 없이 넘김
         except Exception as e:
             # NOTE: 카프카 클라이언트의 예외이므로 그대로 raise
             raise
 
-    async def run(self,):
+    async def run(
+        self,
+    ):
         self.logger.info_start(f"{self.config.component_name} 실행")
         while True:
             try:
                 await self.initialize_websocket_client()
                 await self.listen()
             except Exception as e:
-                self.logger.exception_common(error=e, description=f"웹소켓 수신 중 오류, {self.config.retry_config.retry_delay} 초 이후 재시도")
+                self.logger.exception_common(
+                    error=e,
+                    description=f"웹소켓 수신 중 오류, {self.config.retry_config.retry_delay} 초 이후 재시도",
+                )
                 await asyncio.sleep(self.config.retry_config.retry_delay)
 
-    async def close(self,):
+    async def close(
+        self,
+    ):
         self.logger.info_start(f"{self.config.component_name} 종료")
         if self.websocket and not self.websocket.closed:
             await custom_retry(
@@ -132,7 +189,7 @@ class KrakenWebSocketClient(KrakenBaseComponent):
                 func=self.websocket.close,
             )
         self.logger.info_success(f"{self.config.component_name} 종료")
-    
+
     async def ping(self):
         ping_msg: str = KrakenPingWebSocketClientConfigModel().subscription_msg
         await custom_retry(
@@ -140,7 +197,7 @@ class KrakenWebSocketClient(KrakenBaseComponent):
             retry_config=self.config.retry_config,
             description=f"{self.config.component_name} PING 시도",
             func=self.send,
-            func_kwargs={"message": ping_msg}
+            func_kwargs={"message": ping_msg},
         )
 
     async def check_component_health(self):
@@ -172,4 +229,3 @@ class KrakenWebSocketClient(KrakenBaseComponent):
                 health_status_code=KrakenProducerStatusCodeEnum.NO_HEART_BEAT.value,
                 message=f"{time_diff.total_seconds():.2f} 초 이전 HeartBeat 응답 수신됨",
             )
-

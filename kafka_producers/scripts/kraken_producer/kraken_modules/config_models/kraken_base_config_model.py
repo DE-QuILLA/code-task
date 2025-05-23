@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class KrakenRetryConfig(BaseModel):
     """네트워크 IO 등 반복 작업에 필요한 공통 설정 데이터 모델"""
+
     retry_num: int = 5
     retry_delay: int = 1
     conn_timeout: int = 20
@@ -10,6 +11,7 @@ class KrakenRetryConfig(BaseModel):
 
 class KrakenBaseConfigModel(BaseModel):
     """주요 컴포넌트 초기화 등에 사용, 객체 내부의 정보를 명세하는 데이터 모델"""
+
     component_name: str
     retry_config: KrakenRetryConfig = KrakenRetryConfig()
 

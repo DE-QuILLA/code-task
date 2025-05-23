@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 class KrakenBaseComponent(ABC):
     """Config 객체를 가지며, STATUS MANAGER에 등록되는 주요 컴포넌트 명세 인터페이스"""
+
     def __init__(self, status_manager: KrakenProducerStatusManager):
         self.config: KrakenBaseConfigModel
         self.status_manager = status_manager
@@ -33,4 +34,6 @@ class KrakenBaseComponent(ABC):
         - 필요 시 async 사용
         """
         new_status = await self.check_component_health()
-        await self.status_manager.update_manager_status(component_name=self.config.component_name, new_status=new_status)
+        await self.status_manager.update_manager_status(
+            component_name=self.config.component_name, new_status=new_status
+        )

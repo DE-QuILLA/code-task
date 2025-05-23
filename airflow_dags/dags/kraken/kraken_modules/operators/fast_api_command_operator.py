@@ -2,6 +2,7 @@ from airflow.models import BaseOperator
 from airflow.utils.context import Context
 import requests
 
+
 class FastApiCommandOperator(BaseOperator):
     """
     FastAPI에 명령을 전달하는 Airflow 커스텀 오퍼레이터
@@ -17,6 +18,7 @@ class FastApiCommandOperator(BaseOperator):
     :param headers: HTTP 요청 헤더
     :param timeout: 요청 타임아웃 시간(초)
     """
+
     def __init__(
         self,
         endpoint: str,
@@ -42,7 +44,9 @@ class FastApiCommandOperator(BaseOperator):
         url = f"{self.base_url.rstrip('/')}/{self.endpoint.lstrip('/')}"
 
         try:
-            self.log.info(f"{self.log_msg_prefix} 보낼 요청: \n{self.method.upper()} {url} payload={self.payload}")
+            self.log.info(
+                f"{self.log_msg_prefix} 보낼 요청: \n{self.method.upper()} {url} payload={self.payload}"
+            )
             response = requests.request(
                 method=self.method,
                 url=url,
@@ -51,7 +55,9 @@ class FastApiCommandOperator(BaseOperator):
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            self.log.info(f"{self.log_msg_prefix} 응답: \n{response.status_code}: {response.text}")
+            self.log.info(
+                f"{self.log_msg_prefix} 응답: \n{response.status_code}: {response.text}"
+            )
         except Exception as e:
             self.log.exception(f"{self.log_msg_prefix} API 호출 중 에러 발생: \n")
             raise

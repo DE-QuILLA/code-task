@@ -20,19 +20,30 @@ class StdoutFallBackLogger:
 
 # 5초 대기, 3회 재시도
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
-def notify_discord(kind_of_callback: str, message: str, webhook_url: str, logger: Optional[logging.Logger],):
+def notify_discord(
+    kind_of_callback: str,
+    message: str,
+    webhook_url: str,
+    logger: Optional[logging.Logger],
+):
     logger = logger or StdoutFallBackLogger()
     payload = {
         "content": message,
     }
     headers = {"Content-Type": "application/json"}
     try:
-        logger.info(f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 시도!")
+        logger.info(
+            f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 시도!"
+        )
         response = requests.post(webhook_url, json=payload, headers=headers)
         response.raise_for_status()
-        logger.info(f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 완료!")
+        logger.info(
+            f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 완료!"
+        )
     except Exception as e:
-        logger.exception(f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 실패!")
+        logger.exception(
+            f"[Discord Webhook Notifier] 디스코드로 [{kind_of_callback}] 메시지 전송 실패!"
+        )
         raise e
 
 
@@ -48,7 +59,12 @@ def discord_success_callback(context: Dict[str, Any]):
     현재 UTC 시각: {now_utc}
     현재 KST 시각: {now_kst}
     """
-    notify_discord(kind_of_callback=f"{dag_id} DAG SUCCESS", message=message, webhook_url=DISCORD_WEBHOOK, logger=ti.log,)
+    notify_discord(
+        kind_of_callback=f"{dag_id} DAG SUCCESS",
+        message=message,
+        webhook_url=DISCORD_WEBHOOK,
+        logger=ti.log,
+    )
 
 
 def discord_failure_callback(context: Dict[str, Any]):
@@ -63,7 +79,12 @@ def discord_failure_callback(context: Dict[str, Any]):
     현재 UTC 시각: {now_utc}
     현재 KST 시각: {now_kst}
     """
-    notify_discord(kind_of_callback=f"{dag_id} DAG FAILURE", message=message, webhook_url=DISCORD_WEBHOOK, logger=ti.log,)
+    notify_discord(
+        kind_of_callback=f"{dag_id} DAG FAILURE",
+        message=message,
+        webhook_url=DISCORD_WEBHOOK,
+        logger=ti.log,
+    )
 
 
 def discord_sla_miss_callback(context: Dict[str, Any]):
@@ -79,4 +100,9 @@ def discord_sla_miss_callback(context: Dict[str, Any]):
     현재 UTC 시각: {now_utc}
     현재 KST 시각: {now_kst}
     """
-    notify_discord(kind_of_callback=f"{dag_id} DAG SLA MISS", message=message, webhook_url=DISCORD_WEBHOOK, logger=ti.log,)
+    notify_discord(
+        kind_of_callback=f"{dag_id} DAG SLA MISS",
+        message=message,
+        webhook_url=DISCORD_WEBHOOK,
+        logger=ti.log,
+    )

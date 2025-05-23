@@ -6,8 +6,9 @@ class KrakenRESTAPICollectorConfigModel(KrakenBaseConfigModel):
     """
     Collector Config 객체
     """
+
     component_name: str = "REST API ACTIVE SYMBOL COLLECTOR"
-    
+
     api_url: str = "https://api.kraken.com/0/public/Assets"
     kraken_redis_key: str = "kraken_base_symbols"
     producer_urls: List[str]

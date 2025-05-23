@@ -6,13 +6,17 @@ from typing import Set
 from kraken_modules.config_models import KrakenRedisClientConfigModel
 from kraken_modules.utils.logging import KrakenStdandardLogger
 from kraken_modules.utils.wrappers import custom_retry
-from kraken_modules.utils.exceptions import KrakenRedisClientConnectionException, KrakenRedisClientCanNotCloseException
+from kraken_modules.utils.exceptions import (
+    KrakenRedisClientConnectionException,
+    KrakenRedisClientCanNotCloseException,
+)
 
 
 class KrakenRedisClient:
     """
     Redis 인스턴스와의 연결을 나타내는 객체
     """
+
     def __init__(self, config: KrakenRedisClientConfigModel):
         # config 객체
         self.config = config
@@ -20,9 +24,13 @@ class KrakenRedisClient:
         # 동적 변수 / 외부 객체 주입
         self.is_healthy = False
         self.redis: Redis = None
-        self.logger: KrakenStdandardLogger = KrakenStdandardLogger(self.config.component_name)
+        self.logger: KrakenStdandardLogger = KrakenStdandardLogger(
+            self.config.component_name
+        )
 
-    async def initialize_redis(self,):
+    async def initialize_redis(
+        self,
+    ):
         """
         Redis Client 초기화
         """
@@ -36,7 +44,9 @@ class KrakenRedisClient:
         """
         try:
             self.logger.info_start(description="Redis 연결")
-            self.redis = Redis.from_url(url=self.config.redis_url, decode_responses=True)
+            self.redis = Redis.from_url(
+                url=self.config.redis_url, decode_responses=True
+            )
             pong = await self._ping_with_retry(desc_override="Redis 연결 상태 확인")
             if pong:
                 self.is_healthy = True
@@ -46,13 +56,17 @@ class KrakenRedisClient:
                 self.logger.warning_common(description="예외 없는 Redis Ping 실패")
         except Exception as e:
             self.logger.exception_common(error=e, description="Redis 연결")
-            raise KrakenRedisClientConnectionException("Redis Client 초기화 중 연결 실패")
+            raise KrakenRedisClientConnectionException(
+                "Redis Client 초기화 중 연결 실패"
+            )
         finally:
             if self.redis and not self.is_healthy:
                 self.logger.warning_common(f"비정상적 Redis 연결 종료")
                 self.close()
 
-    async def _ping_with_retry(self,) -> bool:
+    async def _ping_with_retry(
+        self,
+    ) -> bool:
         """
         retry 로직을 포함한 ping to redis
         """
@@ -89,9 +103,9 @@ class KrakenRedisClient:
             retry_config=self.config.retry_config,
             description=f"[{redis_key}] KEY 데이터 GET ALL 요청",
             func=self.redis.smembers,
-            func_args=(redis_key,)
+            func_args=(redis_key,),
         )
-    
+
     async def delete_all_data(self, redis_key: str):
         """
         특정 key의 모든 데이터를 삭제하는 기능
@@ -101,9 +115,9 @@ class KrakenRedisClient:
             retry_config=self.config.retry_config,
             description=f"[{redis_key}] KEY 데이터 DELETE 요청",
             func=self.redis.delete,
-            func_args=(redis_key,)
+            func_args=(redis_key,),
         )
-    
+
     async def save_set_data(self, redis_key: str, new_data_set: Set[str]):
         """
         특정 key에 Set 형태의 데이터를 저장하는 기능
@@ -113,7 +127,7 @@ class KrakenRedisClient:
             retry_config=self.config.retry_config,
             description=f"[{redis_key}] KEY 데이터 SAVE 요청",
             func=self.redis.sadd,
-            func_args=(redis_key, *new_data_set)
+            func_args=(redis_key, *new_data_set),
         )
 
     async def update_if_changed(self, redis_key: str, new_data_set: Set[str]) -> bool:
@@ -130,7 +144,7 @@ class KrakenRedisClient:
 
             if new_data_set:
                 await self.save_set_data(redis_key=redis_key, new_data=new_data_set)
-            
+
             self.logger.info_success(f"Redis {redis_key} 키 갱신")
             # 변경 발생
             return True

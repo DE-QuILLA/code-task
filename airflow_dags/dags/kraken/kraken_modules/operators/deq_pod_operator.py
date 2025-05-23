@@ -9,10 +9,10 @@ from typing import Dict, Optional, Any
 class DeqPodOperator(KubernetesPodOperator):
     """
     KubernetesPodOperator를 확장한 ETL 로직 관련 파이썬 스크립트 실행용 Pod 생성 오퍼레이터
-    
+
     필수 파라미터
     :param script_path: Pod 내에서 실행할 엔트리포인트가 될 스크립트의 폴더 + 파일 경로(airflow_pod_scripts내의 경로) - ex) "kraken/some_script.py"
-    
+
     선택 파라미터
     :param is_delete_operator_pod: 실행 후 해당 pod 삭제 여부 -> True면 삭제
     :param get_logs: 실행될 pod의 로그를 airflow에서 받아볼지 여부 -> True면 받아옴
@@ -28,15 +28,15 @@ class DeqPodOperator(KubernetesPodOperator):
     def __init__(
         self,
         script_path: str,
-        is_delete_operator_pod: Optional[bool]=True,
-        get_logs: Optional[bool]=True,
-        custom_args: Optional[Dict[str, Any]]=None,
-        cpu_request: Optional[str]="500Mi",
+        is_delete_operator_pod: Optional[bool] = True,
+        get_logs: Optional[bool] = True,
+        custom_args: Optional[Dict[str, Any]] = None,
+        cpu_request: Optional[str] = "500Mi",
         memory_request: Optional[str] = "512Mi",
-        cpu_limit: Optional[str]="1000m",
-        memory_limit: Optional[str]="1Gi",
-        image: Optional[str]="coffeeisnan/deq-airflow-pod-script:latest",
-        namespace: Optional[str] ="airflow",
+        cpu_limit: Optional[str] = "1000m",
+        memory_limit: Optional[str] = "1Gi",
+        image: Optional[str] = "coffeeisnan/deq-airflow-pod-script:latest",
+        namespace: Optional[str] = "airflow",
         *args,
         **kwargs,
     ):
@@ -48,7 +48,9 @@ class DeqPodOperator(KubernetesPodOperator):
         # 예시: kraken/main.py => [[DEQ-POD-OPERATOR] - [MAIN]]
         # NOTE: self.log는 super.__init__() 이후 접근 가능하기 때문에 Logger 클래스 사용
         script_file_name = self.script_path.split("/")[-1][:-3]
-        self.logger: logging.Logger = logging.getLogger(f"[[DEQ-POD-OPERATOR] - [{script_file_name.upper()}]]")
+        self.logger: logging.Logger = logging.getLogger(
+            f"[[DEQ-POD-OPERATOR] - [{script_file_name.upper()}]]"
+        )
 
         # arguments 구성하기
         if self.custom_args:
@@ -78,13 +80,13 @@ class DeqPodOperator(KubernetesPodOperator):
             namespace=namespace,
             is_delete_operator_pod=self.is_delete_operator_pod,
             get_logs=self.get_logs,
-            resources = {
+            resources={
                 "limit_cpu": cpu_limit,
                 "limit_memory": memory_limit,
                 "request_cpu": cpu_request,
                 "request_memory": memory_request,
             }
-            *args,
+            * args,
             **kwargs,
         )
 

@@ -7,6 +7,7 @@ class KrakenStdandardLogger:
     """
     공통 로깅 포맷 및 핸들러 설정 제공 커스텀 로거 클래스
     """
+
     def __init__(self, logger_name: str, logging_level=logging.DEBUG):
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging_level)
@@ -22,7 +23,9 @@ class KrakenStdandardLogger:
             stderr_handler.setLevel(logging.ERROR)
 
             # 공통 포매팅
-            formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
+            formatter = logging.Formatter(
+                "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
+            )
 
             stdout_handler.setFormatter(formatter)
             stderr_handler.setFormatter(formatter)
@@ -48,7 +51,9 @@ class KrakenStdandardLogger:
 
     def error_common(self, error: Exception, description: str) -> str:
         """ERROR 레벨 이벤트 발생 로그 메시지"""
-        self.logger.error(f"{description} 중 {type(error).__name__} 발생: {error}\n{traceback.format_exc()}")
+        self.logger.error(
+            f"{description} 중 {type(error).__name__} 발생: {error}\n{traceback.format_exc()}"
+        )
 
     def info_retry_start(self, attempt: int, retry_num: int, description: str) -> str:
         """INFO 레벨 반복 작업 시도 로그 메시지"""
@@ -58,6 +63,10 @@ class KrakenStdandardLogger:
         """INFO 레벨 반복 작업 성공 로그 메시지"""
         self.logger.info(f"{description} 중 {attempt}/{retry_num} 번째 시도 성공!")
 
-    def exception_retry_failure(self, attempt: int, retry_num: int, description: str, error: Exception) -> str:
+    def exception_retry_failure(
+        self, attempt: int, retry_num: int, description: str, error: Exception
+    ) -> str:
         """EXCEPTION 레벨 반복 작업 실패 로그 메시지"""
-        self.logger.exception(f"{description} 중 {attempt}/{retry_num} 번째 시도 실패\n{type(error).__name__}: {error}\n")
+        self.logger.exception(
+            f"{description} 중 {attempt}/{retry_num} 번째 시도 실패\n{type(error).__name__}: {error}\n"
+        )

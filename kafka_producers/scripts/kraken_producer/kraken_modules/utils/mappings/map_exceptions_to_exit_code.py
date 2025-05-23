@@ -5,24 +5,19 @@ from kraken_modules.utils.exceptions import (
     KrakenProducerKafkaClientConnectionException,
     KrakenProducerNotValidMessageTypeException,
     KrakenProducerProduceFailureException,
-
     # Redis Client
     KrakenProdcuerRedisConnectionException,
     KrakenProdcuerRedisFetchDataException,
     KrakenProdcuerRedisCloseFailureException,
-
     # Web Socket Client
     KrakenProducerWebSocketClientConnectionException,
     KrakenProducerWebSocketClientMessageSendFailureException,
-    KrakenProducerWebSocketClientSubscriptionFailureException, 
+    KrakenProducerWebSocketClientSubscriptionFailureException,
     KrakenProducerWebSocketClientUnsubscriptionFailureException,
-
     # Active Symbol Manager
     KrakenProducerActiveSymbolManagerRefreshException,
-
     # ALL CUSTOM EXCEPTIONS
     ALL_CUSTOM_EXCEPTIONS,
-
     # SUCCESS
     KrakenScriptSuccess,
 )
@@ -35,24 +30,21 @@ EXCEPTION_TO_EXIT_CODE = {
     KrakenProducerKafkaClientConnectionException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_CONNECTION_FAIL_ERR,
     KrakenProducerNotValidMessageTypeException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_INVALID_MESSAGE_ERR,
     KrakenProducerProduceFailureException: KrakenProducerExitCodeEnum.KAFKA_CLIENT_PRODUCE_FAIL_ERR,
-
     # 2. Redis Client
     KrakenProdcuerRedisConnectionException: KrakenProducerExitCodeEnum.REDIS_CONNECTION_FAIL_ERR,
     KrakenProdcuerRedisFetchDataException: KrakenProducerExitCodeEnum.REDIS_FETCH_FAIL_ERR,
     KrakenProdcuerRedisCloseFailureException: KrakenProducerExitCodeEnum.REDIS_CLOSE_FAIL_ERR,
-
     # 3. Web Socket Client
     KrakenProducerWebSocketClientConnectionException: KrakenProducerExitCodeEnum.WS_CONNECTION_FAIL_ERR,
     KrakenProducerWebSocketClientMessageSendFailureException: KrakenProducerExitCodeEnum.WS_MESSAGE_SEND_FAIL_ERR,
-    KrakenProducerWebSocketClientSubscriptionFailureException: KrakenProducerExitCodeEnum.WS_SUBSCRIBE_FAIL_ERR, 
+    KrakenProducerWebSocketClientSubscriptionFailureException: KrakenProducerExitCodeEnum.WS_SUBSCRIBE_FAIL_ERR,
     KrakenProducerWebSocketClientUnsubscriptionFailureException: KrakenProducerExitCodeEnum.WS_UNSUBSCRIBE_FAIL_ERR,
-
     # 4. 아직 정의되지 않은 에러의 경우
     Exception: KrakenProducerExitCodeEnum.UNKNOWN_EXCEPTION,
-
     # 5. 성공
     KrakenScriptSuccess: KrakenProducerExitCodeEnum.SUCCESS,
 }
+
 
 def get_exitcode_from_exception(e: Exception):
     for error, code in EXCEPTION_TO_EXIT_CODE:

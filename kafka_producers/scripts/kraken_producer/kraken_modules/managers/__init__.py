@@ -9,5 +9,8 @@ Manager 클래스(Client, 데이터 등을 관리하는 역할)를 작성하는 
 """
 
 from .kraken_active_symbol_manager import KrakenActiveSymbolManager
-from .kraken_producer_status_manager import KrakenProducerStatusManager, KrakenProducerComponentHealthStatus
+from .kraken_producer_status_manager import (
+    KrakenProducerStatusManager,
+    KrakenProducerComponentHealthStatus,
+)
 from .kraken_websocket_client_manager import KrakenWebSocketClientManager

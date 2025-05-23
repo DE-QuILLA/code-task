@@ -44,13 +44,25 @@ class KrakenRESTClient:
                     },
                 )
         except aiohttp.ClientResponseError as e:
-            self.logger.exception_common(error=e, description=f"{url} 경로 api 호출 중 http 예외")
-            raise KrakenRESTClientHTTPException(f"{url} API 호출 중 HTTP 관련 예외 발생")
+            self.logger.exception_common(
+                error=e, description=f"{url} 경로 api 호출 중 http 예외"
+            )
+            raise KrakenRESTClientHTTPException(
+                f"{url} API 호출 중 HTTP 관련 예외 발생"
+            )
         except Exception as e:
-            self.logger.exception_common(error=e, description=f"{url} 경로 api 호출 중 일반 예외")
-            raise 
+            self.logger.exception_common(
+                error=e, description=f"{url} 경로 api 호출 중 일반 예외"
+            )
+            raise
 
-    async def _get_json(self, session: aiohttp.ClientSession, url: str, headers: Dict[str, Any] = None, params: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def _get_json(
+        self,
+        session: aiohttp.ClientSession,
+        url: str,
+        headers: Dict[str, Any] = None,
+        params: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
         """
         GET 요청 후 JSON 응답 반환하는 내부 로직
         """

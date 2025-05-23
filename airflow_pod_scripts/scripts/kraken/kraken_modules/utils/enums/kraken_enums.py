@@ -1,5 +1,6 @@
 from enum import Enum, unique
 
+
 @unique
 class KrakenExitCodeEnum(Enum):
     # 0번대: 성공
@@ -17,7 +18,6 @@ class KrakenExitCodeEnum(Enum):
     NO_DATA_IN_API_RESPONSE_ERR = 302
     INVALID_KEY_VALUE_ERR = 303
     PRODUCER_API_CALL_FAIL_ERR = 304
-
 
     # 800번대: 개발자 잘못 (잘못된 ARG 등)
     INVALID_ARGS_ERR = 801

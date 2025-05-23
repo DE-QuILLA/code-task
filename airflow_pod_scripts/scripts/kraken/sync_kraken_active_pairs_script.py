@@ -1,7 +1,11 @@
 # custom
 from kraken_modules.collectors import KrakenActiveSymbolsRestApiCollector
 from kraken_modules.clients import KrakenRedisClient, KrakenRESTClient
-from kraken_modules.config_models import KrakenRedisClientConfigModel, KrakenRESTClientConfigModel, KrakenRESTAPICollectorConfigModel
+from kraken_modules.config_models import (
+    KrakenRedisClientConfigModel,
+    KrakenRESTClientConfigModel,
+    KrakenRESTAPICollectorConfigModel,
+)
 from kraken_modules.utils.enums import KrakenExitCodeEnum
 from kraken_modules.utils.logging import KrakenStdandardLogger
 from kraken_modules.utils.exceptions import KrakenScriptSuccess
@@ -22,26 +26,75 @@ if __name__ == "__main__":
     logger: KrakenStdandardLogger = KrakenStdandardLogger(logger_name="MAIN")
 
     # 1. 필요 arguments 파싱
-    try: 
-        logger.info_start("argument 파싱",)
-        parser = argparse.ArgumentParser(description="크라켄 거래쌍 결정 옵션 argument용 parser")
+    try:
+        logger.info_start(
+            "argument 파싱",
+        )
+        parser = argparse.ArgumentParser(
+            description="크라켄 거래쌍 결정 옵션 argument용 parser"
+        )
 
-        parser.add_argument("--api_url", type=str, required=True, help="Kraken 거래쌍 API URL")
-        parser.add_argument("--api_params", type=str, required=False, default='{}', help="Kraken 거래쌍 API params")
-        parser.add_argument("--api_headers", type=str, required=False, default='{}', help="Kraken 거래쌍 API headers")
+        parser.add_argument(
+            "--api_url", type=str, required=True, help="Kraken 거래쌍 API URL"
+        )
+        parser.add_argument(
+            "--api_params",
+            type=str,
+            required=False,
+            default="{}",
+            help="Kraken 거래쌍 API params",
+        )
+        parser.add_argument(
+            "--api_headers",
+            type=str,
+            required=False,
+            default="{}",
+            help="Kraken 거래쌍 API headers",
+        )
 
-        parser.add_argument("--redis_url", type=str, required=True, help="GKE 내 Redis Service URL")
-        parser.add_argument("--redis_key", type=str, required=True, help="크라켄 symbol 정보를 담는 레디스 키")
-        parser.add_argument("--producer_urls", type=str, required=True, help="producer 쪽 url, 콤마로 구분된 string")
+        parser.add_argument(
+            "--redis_url", type=str, required=True, help="GKE 내 Redis Service URL"
+        )
+        parser.add_argument(
+            "--redis_key",
+            type=str,
+            required=True,
+            help="크라켄 symbol 정보를 담는 레디스 키",
+        )
+        parser.add_argument(
+            "--producer_urls",
+            type=str,
+            required=True,
+            help="producer 쪽 url, 콤마로 구분된 string",
+        )
 
-        parser.add_argument("--retry_num", type=int, required=False, default=5, help="retry 회수")
-        parser.add_argument("--retry_delay", type=int, required=False, default=5, help="retry 딜레이 (초)")
-        parser.add_argument("--conn_timeout", type=int, required=False, default=120, help="커넥션 타임아웃 (초)")
+        parser.add_argument(
+            "--retry_num", type=int, required=False, default=5, help="retry 회수"
+        )
+        parser.add_argument(
+            "--retry_delay",
+            type=int,
+            required=False,
+            default=5,
+            help="retry 딜레이 (초)",
+        )
+        parser.add_argument(
+            "--conn_timeout",
+            type=int,
+            required=False,
+            default=120,
+            help="커넥션 타임아웃 (초)",
+        )
 
         args: Namespace = parser.parse_args()
-        logger.info_success(description="argument 파싱",)
+        logger.info_success(
+            description="argument 파싱",
+        )
     except Exception as e:
-        logger.exception_common(error=e, description="argument 파싱",)
+        logger.exception_common(
+            error=e,
+            description="argument 파싱",
+        )
         sys.exit(KrakenExitCodeEnum.INVALID_ARGS_ERR.value)
 
     # 2. arguments 전처리
@@ -87,9 +140,8 @@ if __name__ == "__main__":
         conn_timeout=args.conn_timeout,
     )
     collector = KrakenActiveSymbolsRestApiCollector(
-        config=collector_config,
-        redis_client=redis_client,
-        rest_client=rest_client)
+        config=collector_config, redis_client=redis_client, rest_client=rest_client
+    )
 
     try:
         logger.info_start("Kraken active 거래쌍 수집")

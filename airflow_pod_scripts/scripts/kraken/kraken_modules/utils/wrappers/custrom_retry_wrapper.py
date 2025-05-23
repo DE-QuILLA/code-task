@@ -16,22 +16,30 @@ async def custom_retry(
     async with async_timeout.timeout(retry_config.conn_timeout):
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(retry_config.retry_num),
-            wait=wait_fixed(retry_config.retry_delay)
+            wait=wait_fixed(retry_config.retry_delay),
         ):
             with attempt:
                 try:
-                    logger.info_retry_start(attempt=attempt.retry_state.attempt_number, retry_num=retry_config.retry_num, retry_delay=retry_config.retry_delay,)
+                    logger.info_retry_start(
+                        attempt=attempt.retry_state.attempt_number,
+                        retry_num=retry_config.retry_num,
+                        retry_delay=retry_config.retry_delay,
+                    )
                     func_args = func_args or ()
                     func_kwargs = func_kwargs or {}
                     result = await func(*func_args, **func_kwargs)
-                    logger.info_retry_success(attempt=attempt.retry_state.attempt_number, retry_num=retry_config.retry_num, retry_delay=retry_config.retry_delay,)
+                    logger.info_retry_success(
+                        attempt=attempt.retry_state.attempt_number,
+                        retry_num=retry_config.retry_num,
+                        retry_delay=retry_config.retry_delay,
+                    )
                     return result
                 except Exception as e:
                     logger.exception_retry_failure(
                         attempt=attempt.retry_state.attempt_number,
                         description=description,
                         retry_num=retry_config.retry_num,
-                        error=e
+                        error=e,
                     )
                     if attempt.retry_state.attempt_number >= retry_config.retry_num:
                         raise
