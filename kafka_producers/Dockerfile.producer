@@ -1,0 +1,15 @@
+# 베이스 이미지를 Python 3.11 슬림으로 설정
+FROM python:3.11-slim
+
+# 작업 디렉토리를 설정
+WORKDIR /app
+
+# 없을 경우 스크립트 폴더를 생성
+RUN mkdir -p /app/kafka_producers/
+
+# 현재 디렉토리의 scripts 폴더를 컨테이너의 /app/airflow_pod_scripts로 복사
+COPY ./scripts /app/kafka_producers/
+
+# 사용 모듈 설치
+COPY ./producer_requirements.txt /opt/producer_requirements.txt
+RUN pip install -r /opt/producer_requirements.txt

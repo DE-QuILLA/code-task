@@ -1,0 +1,52 @@
+name: Build and Push Docker Image of Spark
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'spark/**'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # 1. spark-connect
+    - name: Build and Push Spark-Connect-Server Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./spark
+        file: ./spark/Dockerfile.spark-connect
+        push: true
+        tags: coffeeisnan/deq-spark-connect-server:latest
+
+    # 2. spark-history-server
+    - name: Build and Push Spark-History-Server Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./spark
+        file: ./spark/Dockerfile.spark-history-server
+        push: true
+        tags: coffeeisnan/deq-spark-history-server:latest
+
+    # 3. spark-operator
+    - name: Build and Push Docker image for spark jobs in Spark Operator
+      uses: docker/build-push-action@v5
+      with:
+        context: ./spark
+        file: ./spark/Dockerfile.spark-operator
+        push: true
+        tags: coffeeisnan/deq-spark-operator:latest

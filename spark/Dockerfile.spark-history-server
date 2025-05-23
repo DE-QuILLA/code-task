@@ -1,0 +1,18 @@
+# Dockerfile
+FROM apache/spark:3.5.1
+
+ENV SPARK_NO_DAEMONIZE=true
+
+# JARs 포함
+RUN mkdir -p /opt/spark/jars/
+COPY jars/*.jar /opt/spark/jars/
+
+# 엔트리포인트로 History Server 실행
+COPY spark-history-entrypoint.sh /opt/spark-history-entrypoint.sh
+
+USER root
+RUN chmod +x /opt/spark-history-entrypoint.sh
+
+USER spark
+
+ENTRYPOINT ["/opt/spark-history-entrypoint.sh"]

@@ -1,0 +1,34 @@
+name: Build and Push Docker Image of Websocket listeners (Kafka Producer)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'producer/**'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./kafka_producer
+        file: ./kafka_producer/Dockerfile.producer
+        push: true
+        tags: coffeeisnan/deq-producer:latest
