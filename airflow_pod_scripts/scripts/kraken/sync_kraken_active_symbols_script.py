@@ -55,11 +55,18 @@ if __name__ == "__main__":
         parser.add_argument(
             "--redis_url", type=str, required=True, help="GKE 내 Redis Service URL"
         )
+
         parser.add_argument(
-            "--redis_key",
+            "--kraken-symbol_redis_key",
             type=str,
             required=True,
             help="크라켄 symbol 정보를 담는 레디스 키",
+        )
+        parser.add_argument(
+            "--kraken_symbol_meta_redis_key",
+            type=str,
+            required=True,
+            help="크라켄 symbol 메타데이터(수수료 등) 담는 레디스 키",
         )
         parser.add_argument(
             "--producer_urls",
@@ -131,8 +138,9 @@ if __name__ == "__main__":
     collector_config = KrakenRESTAPICollectorConfigModel(
         component_name="REST API ACTIVE SYMBOL COLLECTOR",
         api_url=args.api_url,
-        kraken_redis_key=args.redis_key,
-        producer_urls=args.producer_urls,
+        kraken_symbol_redis_key=args.kraken_symbol_redis_key,
+        kraken_symbol_meta_redis_key=args.kraken_symbol_meta_redis_key,
+        producer_urls=args.producer_urls.split(", "),
         api_params=args.api_params,
         api_headers=args.api_headers,
         retry_num=args.retry_num,

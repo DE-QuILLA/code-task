@@ -1,6 +1,6 @@
 # libraries
 from aiohttp import ClientSession
-from typing import Dict, Any, Set
+from typing import Dict, Any, Set, List
 from abc import ABC, abstractmethod
 
 # custom
@@ -80,14 +80,16 @@ class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
         self.logger.info_success("거래쌍 목록 INGESTION")
 
         self.logger.info_start("거래쌍 목록 TRANSFORMATION")
-        transformed_data = self._transform(raw_data)
+        active_symbols = self._transform(raw_data)
+        actvie_symbols_meta = self._transform_meta_info(raw_data)
         self.logger.info_success("거래쌍 목록 TRANSFORMATION")
 
         self.logger.info_start("거래쌍 목록 LOAD (Redis)")
-        changed_flag = await self._load(transformed_data)
+        symbol_changed_flag = await self._load(active_symbols)
+        await self._cache_meta(actvie_symbols_meta)
         self.logger.info_start("거래쌍 목록 LOAD (Redis)")
 
-        if changed_flag:
+        if symbol_changed_flag:
             self.logger.info_start("프로듀서 /reload 호출")
             await self._update_producer()
             self.logger.info_success("프로듀서 /reload 호출")
@@ -122,6 +124,37 @@ class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
             )
             raise KrakenAPIResponseNoDataException("Kraken API 비어있는 응답 발생")
 
+    def _transform_meta_info(self, raw_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        symbol_meta_map = {}
+        self.logger.info_start(f"{len(raw_data)} 개 거래쌍에서 메타데이터 추출")
+        for k, v in raw_data.items():
+            v: Dict[str, Any]
+            try:
+                wsname: str = v["wsname"]
+                status: str = v["status"]
+                base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
+
+                # 혹시나 Upper로 바꾸기
+                wsname = wsname.upper()
+                base, quote = base.upper(), quote.upper()
+            except (KeyError, ValueError) as _:
+                self.logger.exception_common(f"활성 Symbol 처리")
+                raise KrakenAPIResponseValueException(
+                    f"wsname, status 정보 처리 중 예외 발생\n{k} : {v}"
+                )
+            except Exception as _:
+                self.logger.exception_common(f"활성 Symbol 처리")
+                raise
+
+            if quote == "USD" and status == "online":
+                symbol = f"{base}/{quote}"
+                symbol_meta_map[symbol] = {
+                    "ordermin": v.get("ordermin", "0.0"),
+                    "fees": v.get("fees", []),
+                    "fees_maker": v.get("fees_maker", []),
+                }
+        return symbol_meta_map
+
     def _transform(self, raw_data: Dict[str, Any]) -> Set[str]:
         """
         불러온 데이터를 파싱, 아래 기준으로 필터링 => symbol의 Set[str] 형태로 반환
@@ -129,14 +162,13 @@ class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
         - 기준 통화가 USD 혹은 KRW인 경우
         """
         self.logger.info_start(f"{len(raw_data)} 거래쌍 심볼 transform")
-        krw_base_pairs = set()
-        usd_base_pairs = set()
+        active_usd_symbols = set()
 
         for k, v in raw_data.items():
             try:
                 wsname: str = v["wsname"]
-                base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
                 status: str = v["status"]
+                base, quote = wsname.split("/")  # 예시: base = BTC, quote = USD
 
                 # 혹시나 Upper로 바꾸기
                 wsname = wsname.upper()
@@ -150,30 +182,32 @@ class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
                 self.logger.exception_common(f"활성 Symbol 처리")
                 raise
 
-            if quote in ("KRW", "USD") and status == "online":
-                if quote == "KRW":
-                    self.logger.logger.info(f"KRW 기준 활성 거래쌍: {wsname}")
-                    krw_base_pairs.add(base)
-                else:
-                    self.logger.logger.info(f"USD 기준 활성 거래쌍: {wsname}")
-                    usd_base_pairs.add(base)
+            if quote  == "USD" and status == "online":
+                self.logger.logger.info(f"USD 기준 활성 거래쌍: {wsname}")
+                active_usd_symbols.add(base)
+
             else:
                 self.logger.logger.info(
                     f"KRW/USD 기준 통화가 아니거나 online 상태가 아닌 거래쌍: {wsname}"
                 )
 
-        result = krw_base_pairs & usd_base_pairs
-        self.logger.info_success(f"{len(result)} 개 활성 symbol 처리")
-        return result
+        self.logger.info_success(f"{len(active_usd_symbols)} 개 활성 symbol 처리")
+        return active_usd_symbols
 
     async def _load(self, transformed_data: Set[str]):
         """
         적재 로직, Redis Client에서 변화가 있는지 확인하여 적재, 변화가 발생 시 True, 아닐 시 False 리턴
         """
-        changed_flag = await self.redis_client.update_if_changed(
-            redis_key=self.config.kraken_redis_key, new_data=transformed_data
+        changed_flag = await self.redis_client.replace_set_if_changed(
+            redis_key=self.config.kraken_symbol_redis_key, new_data=transformed_data
         )
         return changed_flag
+
+    async def _cache_meta(self, symbol_meta_map: Dict[str, Dict[str, Any]]):
+        """
+        symbol의 메타 데이터 (특히 거래 수수료) 저장
+        """
+        await self.redis_client.replace_json_if_changed(redis_key=self.config.kraken_symbol_meta_redis_key, new_data=symbol_meta_map)
 
     async def _update_producer(
         self,
