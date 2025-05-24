@@ -1,9 +1,11 @@
+# libraries
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.sensors.time_delta import TimeDeltaSensor
 from airflow.models import Variable
 from datetime import datetime, timezone, timedelta
 
+# custom
 from kraken_modules.operators.deq_pod_operator import DeqPodOperator
 from kraken_modules.operators.fast_api_command_operator import FastApiCommandOperator
 from kraken_modules.notifications.discord import (
@@ -19,14 +21,14 @@ default_args = {
 }
 
 with DAG(
-    dag_id="sync_kraken_active_pairs_to_redis",
+    dag_id="sync_kraken_active_symbols_to_redis_dag",
     default_args=default_args,
     schedule_interval="@quarter_hour",  # NOTE: 수정 가능성 존재, 매 15분
     on_success_callback=discord_success_callback,
     on_failure_callback=discord_failure_callback,
     sla_miss_callback=discord_sla_miss_callback,
     catchup=False,
-    tags=["KRAKEN", "ACTIVE PAIR", "REDIS"],
+    tags=["KRAKEN", "ACTIVE SYMBOL", "REDIS"],
 ) as dag:
     """
     Kraken REST api에서 활성 거래쌍 목록을 가져와서 redis에 저장하고, 변경 사항이 발생 시 fast api를 통해 producer에게 알리는 DAG
@@ -34,19 +36,20 @@ with DAG(
     """
 
     start_task = EmptyOperator(
-        tsak_id="start_sync_kraken_active_pairs_task",
+        tsak_id="start_task_of_kraken_active_symbols_dag",
     )
 
-    sync_active_pairs_data_in_pod_task = DeqPodOperator(
-        task_id="sync_kraken_active_pairs_to_redis_task",
-        script_path="kraken/sync_kraken_active_pairs_script.py",
+    sync_active_symbols_data_in_pod_task = DeqPodOperator(
+        task_id="sync_kraken_active_symbols_to_redis_task",
+        script_path="kraken/sync_kraken_active_symbols_script.py",
         custom_args={
             "api_url": Variable.get("kraken_api_url"),
             "api_params": "{}",
             "api_headers": "{}",
             "redis_url": Variable.get("redis_url"),
-            "redis_key": Variable.get("kraken_redis_key"),
-            "producer_urls": ",".join(
+            "kraken_symbol_redis_key": Variable.get("kraken_symbol_redis_key"),
+            "kraken_symbol_meta_redis_key": Variable.get("kraken_symbol_meta_redis_key"),
+            "producer_urls": ", ".join(
                 [
                     Variable.get("kraken_producer_url"),
                     Variable.get("upbit_producer_url"),
@@ -73,12 +76,12 @@ with DAG(
     )
 
     end_task = EmptyOperator(
-        tsak_id="end_sync_kraken_active_pairs_task",
+        tsak_id="end_task_of_kraken_active_symbols_dag",
     )
 
     (
         start_task
-        >> sync_active_pairs_data_in_pod_task
+        >> sync_active_symbols_data_in_pod_task
         >> wait_5_min_task
         >> fast_api_health_check_task
         >> end_task
