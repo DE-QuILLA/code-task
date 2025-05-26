@@ -10,7 +10,7 @@ from .kraken_base_config_model import KrakenRetryConfig, KrakenBaseConfigModel
 from .kraken_status_manager_config_model import KrakenStatusManagerConfigModel
 from .kraken_standarad_logger_config_model import KrakenStandardLoggerConfigModel
 from .kraken_redis_client_configs import KrakenRedisClientConfigModel
-from .kraken_active_pair_manager_config_model import KrakenActivePairManagerConfigModel
+from .kraken_active_symbol_manager_config_model import KrakenActiveSymbolManagerConfigModel
 from .kraken_kafka_client_configs import KrakenKafkaClientConfigModel
 from .kraken_websocket_client_configs import (
     KrakenBaseWebSocketClientConfigModel,
