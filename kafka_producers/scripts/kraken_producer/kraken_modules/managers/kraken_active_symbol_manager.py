@@ -4,11 +4,11 @@ from kraken_modules.clients import KrakenRedisClient
 from kraken_modules.interfaces import KrakenBaseComponent
 from kraken_modules.managers import KrakenProducerStatusManager
 from kraken_modules.data_models import KrakenProducerComponentHealthStatus
-from kraken_modules.config_models import KrakenActivePairManagerConfigModel
+from kraken_modules.config_models import KrakenActiveSymbolManagerConfigModel
 from kraken_modules.utils.enums import KrakenProducerStatusCodeEnum
 from kraken_modules.utils.wrapper import custom_retry
 from kraken_modules.utils.exceptions import (
-    KrakenProducerWebSocketClientManagerRefreshException,
+    KrakenProducerActiveSymbolManagerRefreshException,
 )
 
 # libraries
@@ -24,12 +24,12 @@ class KrakenActiveSymbolManager(KrakenBaseComponent):
 
     def __init__(
         self,
-        config: KrakenActivePairManagerConfigModel,
+        config: KrakenActiveSymbolManagerConfigModel,
         redis_client: KrakenRedisClient,
         status_manager: KrakenProducerStatusManager,
     ):
         # config 객체
-        self.config: KrakenActivePairManagerConfigModel = config
+        self.config: KrakenActiveSymbolManagerConfigModel = config
 
         # 동적 초기화, 외부 객체 주입
         self.redis_client: KrakenRedisClient = redis_client
@@ -73,29 +73,16 @@ class KrakenActiveSymbolManager(KrakenBaseComponent):
         """
         try:
             self.logger.info_start(description="활성 심볼 Refresh")
-            fetched_kraken_symbols = set(
-                await self._fetch_pairs_from_redis(
-                    redis_key=self.config.kraken_redis_key
-                )
-            )
-            fetched_upbit_symbols = set(
-                await self._fetch_pairs_from_redis(
-                    redis_key=self.config.upbit_redis_key
-                )
-            )
-            fetched_binance_symbols = set(
-                await self._fetch_pairs_from_redis(
-                    redis_key=self.config.binance_redis_key
+            new_symbols = set(
+                await self._fetch_symbols_from_redis(
+                    redis_key=self.config.common_redis_key
                 )
             )
 
-            new_kraken_symbols = (
-                fetched_kraken_symbols & fetched_upbit_symbols & fetched_binance_symbols
-            )
             old_kraken_symbols = self.current_active_symbols
 
-            new_subscription_symbols = new_kraken_symbols - old_kraken_symbols
-            new_unsubscription_symbols = old_kraken_symbols - new_kraken_symbols
+            new_subscription_symbols = new_symbols - old_kraken_symbols
+            new_unsubscription_symbols = old_kraken_symbols - new_symbols
 
             if new_subscription_symbols:
                 self.logger.warning_common(
@@ -107,20 +94,20 @@ class KrakenActiveSymbolManager(KrakenBaseComponent):
                 )
 
             # 상태 업데이트
-            self.current_active_symbols = new_kraken_symbols
+            self.current_active_symbols = new_symbols
             self.logger.info_success(
                 description=f"{len(self.current_active_symbols)}개 활성 심볼 Refresh"
             )
 
             # KRW, USD 통화 붙혀서 리스트로 바꾸고 리턴하기
             return (
-                self._add_currency(new_kraken_symbols),
+                self._add_currency(new_symbols),
                 self._add_currency(new_subscription_symbols),
                 self._add_currency(new_unsubscription_symbols),
             )
         except Exception as e:
             self.logger.exception_common(error=e, description="활성 심볼 Refresh")
-            raise KrakenProducerWebSocketClientManagerRefreshException(
+            raise KrakenProducerActiveSymbolManagerRefreshException(
                 "활성 심볼 Refresh 중 실패"
             )
 
@@ -134,7 +121,7 @@ class KrakenActiveSymbolManager(KrakenBaseComponent):
             symbol + f"/{currency}" for symbol in symbols for currency in currencies
         ]
 
-    async def _fetch_pairs_from_redis(
+    async def _fetch_symbols_from_redis(
         self,
         redis_key: str,
     ) -> Set[str]:

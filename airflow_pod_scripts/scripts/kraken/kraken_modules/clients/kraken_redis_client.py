@@ -1,6 +1,6 @@
 # libraries
 from redis.asyncio import Redis
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, List
 import json
 
 # custom
@@ -197,3 +197,20 @@ class KrakenRedisClient:
                 func=self.redis.set,
                 func_args=(redis_key, json_str)
             )
+
+    async def update_intersection_set(
+        self,
+        redis_keys: List[str],
+        dest_key: str
+    ) -> bool:
+        """
+        여러 Set 키들의 교집합을 계산하여 dest_key에 저장.
+        변경이 발생했을 경우 True 리턴
+        """
+        self.logger.info_start(f"[{dest_key}] 교집합 키 갱신 요청")
+        try:
+            new_data_set = await self.redis.sinter(*redis_keys)
+            return await self.replace_set_if_changed(dest_key, set(new_data_set))
+        except Exception as e:
+            self.logger.exception_common(error=e, description=f"{dest_key} 갱신 중 예외")
+            raise

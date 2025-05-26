@@ -91,6 +91,7 @@ class KrakenActiveSymbolsRestApiCollector(KrakenBaseRestApiCollector):
 
         if symbol_changed_flag:
             self.logger.info_start("프로듀서 /reload 호출")
+            await self.redis_client.update_intersection_set(redis_keys=self.config.redis_keys_of_symbols, dest_key=self.config.common_symbol_redis_key)
             await self._update_producer()
             self.logger.info_success("프로듀서 /reload 호출")
         else:

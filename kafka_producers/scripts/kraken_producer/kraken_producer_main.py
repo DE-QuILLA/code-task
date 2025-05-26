@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from kraken_modules.config_models import (
     KrakenStandardLoggerConfigModel,
     KrakenRedisClientConfigModel,
-    KrakenActivePairManagerConfigModel,
+    KrakenActiveSymbolManagerConfigModel,
     KrakenKafkaClientConfigModel,
     ALL_WEBSOCKET_CLIENT_CONFIG_MODELS,
 )
@@ -54,7 +54,7 @@ async def lifespan(
 
         # 3. ACTIVE PAIR MANAGER
         api_level_logger.info_start("Redis에서 거래쌍 정보 초기화")
-        active_pair_manager_config = KrakenActivePairManagerConfigModel(
+        active_pair_manager_config = KrakenActiveSymbolManagerConfigModel(
             redis_key="kraken:active_pair",  # 필요 시 수정
             component_name="ACTIVE PAIR MANAGER",
             retry_num=5,

@@ -1,4 +1,4 @@
-name: Build and Push Docker Image of Pod from airflow
+name: Build and Push Docker Image of ETL Pod from airflow
 
 on:
   push:
