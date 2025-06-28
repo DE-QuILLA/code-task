@@ -3,7 +3,7 @@
 # Config.CONCURRENCY.name, .value
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -41,5 +41,64 @@ class GDELTIngestConfig(IngestionConfig):
             "events": ".export.CSV.zip",
             "mentions": ".mentions.CSV.zip",
             "gkg": ".gkg.csv.zip",
+        }
+    )
+    # hard-coding field() leads to shared fields across instances!!!
+    cols_to_keep: Dict[str, List[str]] = field(
+        default_factory=lambda: {
+            "events": [
+                "GlobalEventID",
+                "Day",
+                "FractionDate",
+                "Actor1Name",
+                "Actor1Type1Code",
+                "Actor2Name",
+                "Actor2Type1Code",
+                "Actor1Geo_Type",
+                "Actor1Geo_Fullname",
+                "Actor1Geo_Lat",
+                "Actor1Geo_Long",
+                "Actor2Geo_Type",
+                "Actor2Geo_Fullname",
+                "Actor2Geo_Lat",
+                "Actor2Geo_Long",
+                "ActionGeo_Type",
+                "ActionGeo_Fullname",
+                "ActionGeo_Lat",
+                "ActionGeo_Long",
+                "DATEADDED",
+                "SOURCEURL",
+            ],
+            "mentions": [
+                "GlobalEventID",
+                "EventTimeDate",
+                "MentionTimeDate",
+                "MentionType",
+                "MentionIdentifier",
+                "SentenceID",
+                "Actor1CharOffset",
+                "Actor2CharOffset",
+                "ActionCharOffset",
+                "MentionDocLen",
+                "MentionDocTone",
+            ],
+            "gkg": [
+                "GKGRECORDID",
+                "V2.1DATE",
+                "V2SOURCECOLLECTIONIDENTIFIER",
+                "V2SOURCECOMMONNAME",
+                "V2DOCUMENTIDENTIFIER",
+                "V2.1COUNTS",
+                "V2ENHANCEDTHEMES",
+                "V2ENHANCEDLOCATIONS",
+                "V2ENHANCEDPERSONS",
+                "V2ENHANCEDORGANIZATIONS",
+                "V1.5TONE",
+                "V2.1ENHANCEDDATES",
+                "V2GCAM",
+                "V2.1QUOTATIONS",
+                "V2.1ALLNAMES",
+                "V2.1AMOUNTS",
+            ],
         }
     )

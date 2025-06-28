@@ -6,3 +6,5 @@ for_docs/
 
 # 캐시
 *cache/
+
+.vscode/

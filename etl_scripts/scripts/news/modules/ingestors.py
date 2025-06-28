@@ -82,6 +82,9 @@ class GDELTIngestor(Ingestor):
         Fetch-Upload-Signal
         """
         filename, content = await self.fetch(session, url, semaphore)
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        # INSERT SPARK JOB HERE. CALL self.config.cols_to_keep #
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         gcs_uri = upload_to_gcs(
             self.config.gcs_bucket_name,
             self.config.gcs_folder,
